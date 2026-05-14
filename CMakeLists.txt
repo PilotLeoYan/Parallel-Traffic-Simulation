@@ -9,14 +9,16 @@ add_compile_options(-Wall -Wextra)
 # Buscar OpenMP
 find_package(OpenMP REQUIRED)
 
-# Agregar todos los archivos fuente
-file(GLOB_RECURSE SOURCES "src/*.cpp")
+# Buscar Threads (cross-platform, replaces hardcoded pthread)
+find_package(Threads REQUIRED)
 
-# If SFML not found via find_package, try pkg-config
+# Try to find SFML via CMake first (works on Windows with vcpkg/manual installs)
+# If not found, fall back to pkg-config (for Unix systems without CMake config files)
+find_package(SFML 2.5 COMPONENTS graphics window system)
 if(NOT SFML_FOUND)
     find_package(PkgConfig)
     if(PkgConfig_FOUND)
-        pkg_check_modules(SFML REQUIRED sfml-graphics sfml-window sfml-system)
+        pkg_check_modules(SFML_PKGCONF REQUIRED IMPORTED_TARGET sfml-graphics sfml-window sfml-system)
     endif()
 endif()
 
@@ -41,13 +43,31 @@ add_executable(traffic_simulation ${SOURCES})
 target_include_directories(traffic_simulation PRIVATE ${INCLUDE_DIRS})
 
 # Enlace DIRECTO de las librerías (sin intermediarios que inyecten -mwindows)
-target_link_libraries(traffic_simulation PRIVATE
-    sfml-graphics
-    sfml-window
-    sfml-system
-    pthread
-    OpenMP::OpenMP_CXX
-)
+if(SFML_FOUND)
+    # Use imported targets from CMake find_package (SFML 2.x uses sfml-graphics style names)
+    target_link_libraries(traffic_simulation PRIVATE
+        sfml-graphics
+        sfml-window
+        sfml-system
+        Threads::Threads
+        OpenMP::OpenMP_CXX
+    )
+elseif(SFML_PKGCONF_FOUND)
+    # Fall back to pkg-config modules (Unix systems without CMake config files)
+    target_link_libraries(traffic_simulation PRIVATE
+        PkgConfig::SFML_PKGCONF
+        Threads::Threads
+        OpenMP::OpenMP_CXX
+    )
+else()
+    message(FATAL_ERROR "SFML not found. Please install SFML via your package manager or CMake config.")
+endif()
 
-# EL GOLPE DE GRACIA: Forzar a Windows a usar la consola
-target_link_options(traffic_simulation PRIVATE "-mconsole")
+# Windows-specific settings
+if(MSVC)
+    # Use MD runtime (DLL) and enable multi-processor compilation
+    target_compile_options(traffic_simulation PRIVATE /MD /MP)
+elseif(MINGW)
+    # For MinGW, force console subsystem (prevents -mwindows default)
+    target_link_options(traffic_simulation PRIVATE "-mconsole")
+endif()

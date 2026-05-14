@@ -14,7 +14,7 @@ A high-performance traffic simulation system demonstrating concurrency patterns,
 - C++17 or later
 - CMake 3.10+
 - [SFML](https://www.sfml-dev.org/) 2.5+
-- OpenMP
+- OpenMP (GCC on Linux, MSVC on Windows)
 
 ### Installing Dependencies
 
@@ -28,18 +28,38 @@ sudo apt-get install cmake libsfml-dev libomp-dev
 brew install cmake sfml libomp
 ```
 
-**Windows:**
-Install via [vcpkg](https://github.com/microsoft/vcpkg) or download from [SFML website](https://www.sfml-dev.org/download.php).
+**Windows (vcpkg):**
+```bash
+# Install vcpkg first, then:
+vcpkg install sfml:x64-windows
+vcpkg integrate install
+```
 
 ## Building
 
 ```bash
 mkdir build && cd build
 cmake ..
-make
+cmake --build .
 ```
 
-The compiled executable `traffic_simulation` will be placed in the `build` directory.
+The compiled executable will be placed in the `build` directory.
+
+### Building on Windows
+
+**Using vcpkg (recommended):**
+```bash
+mkdir build && cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=[vcpkg root]/scripts/buildsystems/vcpkg.cmake
+cmake --build . --config Release
+```
+
+**Using Visual Studio:**
+```bash
+mkdir build && cd build
+cmake .. -G "Visual Studio 17 2022"
+cmake --build . --config Release
+```
 
 ## Usage
 
@@ -78,35 +98,66 @@ Custom traffic light timings:
 ## Project Structure
 
 ```
-concuproyect/
-├── CMakeLists.txt          # Build configuration
-├── README.md                # This file
-├── .gitignore               # Git ignore rules
-├── docs/
-│   └── scheme.drawio        # Architecture diagram
+Parallel-Traffic-Simulation/
+├── CMakeLists.txt              # Build configuration (cross-platform)
+├── tests/
+│   ├── CMakeLists.txt
+│   ├── test_main.cpp
+│   ├── city_test.cpp
+│   ├── common_types_test.cpp
+│   ├── pathfinder_test.cpp
+│   ├── traffic_test.cpp
+│   ├── vehicle_test.cpp
+│   └── test_framework.hpp
 ├── include/
-│   └── concurrency-project/
-│       ├── Intersection.hpp
-│       ├── TrafficLight.hpp
-│       ├── Vehicle.hpp
-│       ├── CityGrid.hpp
-│       ├── AStar.hpp
-│       └── Simulation.hpp
-├── src/
-│   ├── main.cpp             # Application entry point
-│   ├── Intersection.cpp
-│   ├── TrafficLight.cpp
-│   ├── Vehicle.cpp
-│   ├── CityGrid.cpp
-│   ├── AStar.cpp
-│   └── Simulation.cpp
-└── tests/
-    └── test_main.cpp
+│   ├── city/
+│   │   ├── city.hpp
+│   │   ├── intersection.hpp
+│   │   └── street.hpp
+│   ├── common/
+│   │   ├── constants.hpp
+│   │   ├── logger.hpp
+│   │   ├── simulation_controller.hpp
+│   │   └── types.hpp
+│   ├── gui/
+│   │   ├── control_panel.hpp
+│   │   ├── renderer.hpp
+│   │   └── simulation_window.hpp
+│   ├── monitoring/
+│   │   ├── metrics.hpp
+│   │   └── metrics_collector.hpp
+│   ├── traffic/
+│   │   ├── semaphore.hpp
+│   │   └── semaphore_controller.hpp
+│   └── vehicle/
+│       ├── pathfinder.hpp
+│       ├── vehicle.hpp
+│       └── vehicle_manager.hpp
+└── src/
+    ├── main.cpp
+    ├── city/
+    │   ├── city.cpp
+    │   ├── intersection.cpp
+    │   └── street.cpp
+    ├── common/
+    │   ├── logger.cpp
+    │   ├── simulation_controller.cpp
+    │   └── types.cpp
+    ├── gui/
+    │   ├── control_panel.cpp
+    │   ├── renderer.cpp
+    │   └── simulation_window.cpp
+    ├── monitoring/
+    │   ├── metrics.cpp
+    │   └── metrics_collector.cpp
+    ├── traffic/
+    │   ├── semaphore.cpp
+    │   └── semaphore_controller.cpp
+    └── vehicle/
+        ├── pathfinder.cpp
+        ├── vehicle.cpp
+        └── vehicle_manager.cpp
 ```
-
-## Architecture
-
-The simulation follows a concurrent producer-consumer pattern where:
 
 1. **CityGrid** manages the road network and intersections
 2. **TrafficLight** objects coordinate vehicle flow at intersections using condition variables

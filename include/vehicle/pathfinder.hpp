@@ -14,7 +14,9 @@
 #include <set>
 #include <memory>
 #include <functional>
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 namespace vehicle {
 
