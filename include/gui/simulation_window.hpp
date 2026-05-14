@@ -3,6 +3,8 @@
 #include <SFML/Graphics.hpp>
 #include <string>
 #include <memory>
+#include <vector>
+#include "city/intersection.hpp"
 
 namespace city {
     class City;
@@ -11,6 +13,10 @@ namespace city {
 namespace traffic {
     class SemaphoreController;
     class Semaphore;
+}
+
+namespace traffic_simulation {
+    class SimulationController;
 }
 
 namespace gui {
@@ -25,11 +31,13 @@ struct VehicleRenderInfo {
     int destination_x;
     int destination_y;
     bool is_waiting;
+    float angle;
+    std::vector<city::Coordinate> remaining_path;
     
-    VehicleRenderInfo(int vehicle_id, int start_x, int start_y, int dest_x, int dest_y)
+    VehicleRenderInfo(int vehicle_id, int start_x, int start_y, int dest_x, int dest_y, float ang = 0.0f)
         : id(vehicle_id), x(start_x), y(start_y),
           destination_x(dest_x), destination_y(dest_y),
-          is_waiting(false) {}
+          is_waiting(false), angle(ang) {}
 };
 
 /**
@@ -120,9 +128,9 @@ public:
 
     /**
      * @brief Run the main game loop with a simulation controller
-     * @param simulation_controller Reference to simulation controller
+     * @param controller Reference to simulation controller
      */
-    void run();
+    void run(traffic_simulation::SimulationController& controller);
 
     /**
      * @brief Close the window

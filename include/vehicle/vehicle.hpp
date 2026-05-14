@@ -100,6 +100,12 @@ public:
     city::Coordinate getPosition() const;
 
     /**
+     * @brief Get the vehicle's next position in the path
+     * @return Next coordinate, or current position if at destination
+     */
+    city::Coordinate getNextPosition() const;
+
+    /**
      * @brief Get the vehicle's ID
      * @return Vehicle ID
      */
@@ -110,6 +116,11 @@ public:
      * @return Pair of (travel_time, wait_time) in seconds
      */
     std::pair<double, double> getMetrics() const;
+
+    /**
+     * @brief Obtiene el camino restante para dibujarlo
+     */
+    std::vector<city::Coordinate> getRemainingPath() const;
 
     /**
      * @brief Start the vehicle thread
@@ -130,6 +141,12 @@ public:
      * @brief Notify the vehicle that conditions have changed (for CV)
      */
     void notifyConditionsChanged();
+
+    /**
+     * @brief Set the SemaphoreController reference for this vehicle
+     * @param controller Pointer to the SemaphoreController
+     */
+    void setSemaphoreController(const traffic::SemaphoreController* controller);
 
 private:
     /**
@@ -162,6 +179,9 @@ private:
     std::condition_variable cv_;
     std::atomic<bool> running_;
     std::atomic<bool> conditions_changed_;
+
+    // Reference to the SemaphoreController for checking light states
+    const traffic::SemaphoreController* semaphore_controller_ = nullptr;
 };
 
 } // namespace vehicle

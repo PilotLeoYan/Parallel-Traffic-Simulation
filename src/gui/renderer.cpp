@@ -68,28 +68,58 @@ void Renderer::drawIntersection(sf::RenderWindow& window,
 void Renderer::drawVehicle(sf::RenderWindow& window,
                             float x, float y, float radius,
                             int vehicle_id,
-                            bool is_waiting) {
-    sf::Color color = getVehicleColor(vehicle_id);
+                            bool is_waiting,
+                            float angle_degrees) {
+    sf::Color bodyColor = getVehicleColor(vehicle_id);
     
-    sf::CircleShape vehicle(radius);
-    vehicle.setPosition(x - radius, y - radius);
+    // Dimensiones del auto basadas en el radio de la celda
+    float carWidth = radius * 2.2f;  // Largo del auto
+    float carHeight = radius * 1.2f; // Ancho del auto
     
+    // Si está esperando, reducimos un poco la opacidad
+    sf::Uint8 alpha = is_waiting ? 180 : 255;
+    bodyColor.a = alpha;
+
+    // Transformación principal para rotar todo el auto desde su centro
+    sf::Transform transform;
+    transform.translate(x, y);
+    transform.rotate(angle_degrees);
+
+    // 1. Chasis principal
+    sf::RectangleShape carBody(sf::Vector2f(carWidth, carHeight));
+    carBody.setOrigin(carWidth / 2.0f, carHeight / 2.0f);
+    carBody.setFillColor(bodyColor);
+    carBody.setOutlineColor(sf::Color(30, 30, 30, alpha));
+    carBody.setOutlineThickness(1.0f);
+    window.draw(carBody, transform);
+
+    // 2. Techo / Parabrisas (Un rectángulo más oscuro en el centro)
+    float roofWidth = carWidth * 0.5f;
+    float roofHeight = carHeight * 0.8f;
+    sf::RectangleShape roof(sf::Vector2f(roofWidth, roofHeight));
+    roof.setOrigin(roofWidth / 2.0f, roofHeight / 2.0f);
+    // Lo movemos un poco hacia atrás para que el "cofre" (frente) sea más largo
+    roof.setPosition(-carWidth * 0.1f, 0.0f); 
+    roof.setFillColor(sf::Color(20, 20, 25, alpha));
+    window.draw(roof, transform);
+
+    // 3. Luces de freno (Solo se encienden si está esperando/bloqueado)
     if (is_waiting) {
-        // Dimmed color when waiting
-        vehicle.setFillColor(sf::Color(color.r, color.g, color.b, 160));
-    } else {
-        vehicle.setFillColor(color);
+        sf::RectangleShape tailLights(sf::Vector2f(carWidth * 0.1f, carHeight * 0.8f));
+        tailLights.setOrigin(carWidth * 0.05f, carHeight * 0.4f);
+        // Posicionadas en la parte trasera del auto
+        tailLights.setPosition(-carWidth / 2.0f, 0.0f);
+        tailLights.setFillColor(sf::Color(255, 40, 40));
+        
+        // Efecto de brillo (Glow)
+        sf::RectangleShape tailLightsGlow(sf::Vector2f(carWidth * 0.2f, carHeight * 1.0f));
+        tailLightsGlow.setOrigin(carWidth * 0.1f, carHeight * 0.5f);
+        tailLightsGlow.setPosition(-carWidth / 2.0f, 0.0f);
+        tailLightsGlow.setFillColor(sf::Color(255, 40, 40, 80));
+
+        window.draw(tailLightsGlow, transform);
+        window.draw(tailLights, transform);
     }
-    
-    window.draw(vehicle);
-    
-    // Add subtle outline for better visibility
-    sf::CircleShape outline(radius + 1);
-    outline.setPosition(x - radius - 1, y - radius - 1);
-    outline.setFillColor(sf::Color(0, 0, 0, 0));
-    outline.setOutlineColor(sf::Color(30, 30, 30));
-    outline.setOutlineThickness(1);
-    window.draw(outline);
 }
 
 void Renderer::drawStreet(sf::RenderWindow& window,

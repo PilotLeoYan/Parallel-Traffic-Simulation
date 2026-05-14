@@ -47,9 +47,10 @@ public:
      * @param is_waiting If true, draw with reduced opacity
      */
     static void drawVehicle(sf::RenderWindow& window,
-                            float x, float y, float radius,
-                            int vehicle_id,
-                            bool is_waiting = false);
+                        float x, float y, float radius,
+                        int vehicle_id,
+                        bool is_waiting,
+                        float angle_degrees = 0.0f);
 
     /**
      * @brief Draw a street segment between two intersections

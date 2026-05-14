@@ -41,21 +41,26 @@ void SimulationController::initialize(const SimulationConfig& config) {
     Logger::getInstance().info("City initialized with grid size " + std::to_string(config.grid_size));
 
     // Initialize semaphores at key intersections
-    // Use approximately sqrt(vehicle_count) semaphores for good coverage
-    int num_semaphores = static_cast<int>(std::sqrt(static_cast<double>(config.vehicle_count)));
-    if (num_semaphores < 4) {
-        num_semaphores = 4;
-    }
-    if (num_semaphores > config.grid_size * config.grid_size / 4) {
-        num_semaphores = config.grid_size * config.grid_size / 4;
-    }
 
-    semaphore_controller_.initialize(city_, num_semaphores);
+
+    // Vamos a poner semáforos en la mitad de las intersecciones disponibles
+    //int num_semaphores = (config.grid_size * config.grid_size) / 2;
+
+    // O si quieres que TODAS las intersecciones tengan semáforo, usa esto:
+    int num_semaphores = config.grid_size * config.grid_size;
+
+    semaphore_controller_.initialize(city_, num_semaphores, 
+                                     config.green_duration, 
+                                     config.yellow_duration, 
+                                     config.red_duration);
     Logger::getInstance().info("Semaphore controller initialized with " + 
                                std::to_string(semaphore_controller_.getSemaphoreCount()) + " semaphores");
 
     // Create and initialize vehicle manager
     vehicle_manager_ = new vehicle::VehicleManager(city_);
+    
+    vehicle_manager_->setSemaphoreController(&semaphore_controller_);
+
     vehicle_manager_->initialize(config.vehicle_count);
     Logger::getInstance().info("Vehicle manager initialized with " + 
                                std::to_string(vehicle_manager_->getTotalVehicleCount()) + " vehicles");

@@ -41,8 +41,8 @@ public:
      * @param city Reference to the City object
      * @param num_semaphores Number of semaphores to create
      */
-    void initialize(city::City& city, int num_semaphores);
-
+    void initialize(city::City& city, int num_semaphores, int green = 5, int yellow = 2, int red = 6);
+    
     /**
      * @brief Get the semaphore at a specific coordinate
      * @param coord Coordinate to look up (using city::Coordinate)

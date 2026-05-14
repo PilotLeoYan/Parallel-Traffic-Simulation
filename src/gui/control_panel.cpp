@@ -20,8 +20,10 @@ ControlPanel::ControlPanel()
 }
 
 void ControlPanel::initializeText() {
-    // Try to load a system font, fallback to default if unavailable
-    if (!font_.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf") &&
+    // cargar fuentes de Windows y luego las de Linux
+    if (!font_.loadFromFile("C:/Windows/Fonts/arial.ttf") &&
+        !font_.loadFromFile("C:/Windows/Fonts/consola.ttf") &&
+        !font_.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf") &&
         !font_.loadFromFile("/usr/share/fonts/truetype/freefont/FreeSans.ttf")) {
         // Last resort fallback - use a basic system font
         font_.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");

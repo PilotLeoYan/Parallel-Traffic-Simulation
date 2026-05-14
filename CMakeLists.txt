@@ -1,25 +1,24 @@
 cmake_minimum_required(VERSION 3.10)
 project(traffic_simulation VERSION 1.0 LANGUAGES CXX)
 
-# Set C++ standard
+# Configuraciones de C++
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-# Compiler flags
 add_compile_options(-Wall -Wextra)
 
-# Find OpenMP
+# Buscar OpenMP
 find_package(OpenMP REQUIRED)
 
-# Find SFML with components
-find_package(SFML 2.5 COMPONENTS graphics window system QUIET)
+# Buscar Threads (cross-platform, replaces hardcoded pthread)
+find_package(Threads REQUIRED)
 
-# If SFML not found via find_package, try pkg-config
+# Try to find SFML via CMake first (works on Windows with vcpkg/manual installs)
+# If not found, fall back to pkg-config (for Unix systems without CMake config files)
+find_package(SFML 2.5 COMPONENTS graphics window system)
 if(NOT SFML_FOUND)
     find_package(PkgConfig)
     if(PkgConfig_FOUND)
-        pkg_check_modules(SFML REQUIRED sfml-graphics sfml-window sfml-system)
+        pkg_check_modules(SFML_PKGCONF REQUIRED IMPORTED_TARGET sfml-graphics sfml-window sfml-system)
     endif()
 endif()
 
@@ -39,35 +38,36 @@ set(INCLUDE_DIRS
     include/common
 )
 
-# Create executable
+# Crear el ejecutable
 add_executable(traffic_simulation ${SOURCES})
-
-# Include directories
 target_include_directories(traffic_simulation PRIVATE ${INCLUDE_DIRS})
 
-# Link libraries
+# Enlace DIRECTO de las librerías (sin intermediarios que inyecten -mwindows)
 if(SFML_FOUND)
+    # Use imported targets from CMake find_package (SFML 2.x uses sfml-graphics style names)
     target_link_libraries(traffic_simulation PRIVATE
         sfml-graphics
         sfml-window
         sfml-system
+        Threads::Threads
+        OpenMP::OpenMP_CXX
     )
-elseif(SFML_LIBRARIES)
+elseif(SFML_PKGCONF_FOUND)
+    # Fall back to pkg-config modules (Unix systems without CMake config files)
     target_link_libraries(traffic_simulation PRIVATE
-        ${SFML_LIBRARIES}
+        PkgConfig::SFML_PKGCONF
+        Threads::Threads
+        OpenMP::OpenMP_CXX
     )
+else()
+    message(FATAL_ERROR "SFML not found. Please install SFML via your package manager or CMake config.")
 endif()
 
-# Thread and OpenMP
-target_link_libraries(traffic_simulation PRIVATE
-    pthread
-    OpenMP::OpenMP_CXX
-)
-
-# Default to Release build
-if(CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE Release)
+# Windows-specific settings
+if(MSVC)
+    # Use MD runtime (DLL) and enable multi-processor compilation
+    target_compile_options(traffic_simulation PRIVATE /MD /MP)
+elseif(MINGW)
+    # For MinGW, force console subsystem (prevents -mwindows default)
+    target_link_options(traffic_simulation PRIVATE "-mconsole")
 endif()
-
-# Install target
-install(TARGETS traffic_simulation DESTINATION bin)

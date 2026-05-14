@@ -4,6 +4,7 @@
 #include <city/city.hpp>
 #include <city/street.hpp>
 #include <traffic/semaphore_controller.hpp>
+#include "common/simulation_controller.hpp"
 
 namespace gui {
 
@@ -126,81 +127,109 @@ void SimulationWindow::drawGrid() {
     int grid_size = city_->getGridSize();
     int total_size = grid_size * cell_size_;
     
-    // Draw background
     sf::RectangleShape background(sf::Vector2f(total_size, total_size));
-    background.setFillColor(sf::Color(25, 25, 30));
+    background.setFillColor(sf::Color());// Transparente, solo queremos el color de fondo 
     window_.draw(background);
-    
-    // Draw grid lines
-    sf::Color line_color(45, 45, 50);
-    for (int i = 0; i <= grid_size; ++i) {
-        // Vertical lines
-        sf::RectangleShape v_line(sf::Vector2f(1, total_size));
-        v_line.setPosition(i * cell_size_, 0);
-        v_line.setFillColor(line_color);
-        window_.draw(v_line);
-        
-        // Horizontal lines
-        sf::RectangleShape h_line(sf::Vector2f(total_size, 1));
-        h_line.setPosition(0, i * cell_size_);
-        h_line.setFillColor(line_color);
-        window_.draw(h_line);
-    }
 }
 
 void SimulationWindow::drawStreets() {
-    const auto& streets = city_->getStreets();
-    for (const auto& street : streets) {
-        auto start = street->getStartIntersection();
-        auto end = street->getEndIntersection();
+    int grid_size = city_->getGridSize();
+    int total_size = grid_size * cell_size_;
+    
+    // Las calles ocupan el 60% de la celda
+    float road_width = cell_size_ * 0.6f; 
+    float offset = (cell_size_ - road_width) / 2.0f;
+    
+    sf::Color asphalt_color(50, 50, 55);
+    sf::Color dash_color(220, 200, 50, 150); // Amarillo translúcido para las líneas
+
+    // 1. Dibujar todas las calles horizontales
+    for (int y = 0; y < grid_size; ++y) {
+        float pos_y = y * cell_size_ + offset;
         
-        if (start && end) {
-            float start_x = start->getCoordinate().x * cell_size_ + cell_size_ / 2.0f;
-            float start_y = start->getCoordinate().y * cell_size_ + cell_size_ / 2.0f;
-            float end_x = end->getCoordinate().x * cell_size_ + cell_size_ / 2.0f;
-            float end_y = end->getCoordinate().y * cell_size_ + cell_size_ / 2.0f;
-            
-            Renderer::drawStreet(window_, start_x, start_y, end_x, end_y, 
-                              6.0f, sf::Color(90, 90, 95));
+        // Asfalto continuo
+        sf::RectangleShape road(sf::Vector2f(total_size, road_width));
+        road.setPosition(0, pos_y);
+        road.setFillColor(asphalt_color);
+        window_.draw(road);
+
+        // Línea central punteada
+        float center_y = y * cell_size_ + cell_size_ / 2.0f;
+        for (int i = 0; i < total_size; i += 15) {
+            int local_x = i % cell_size_;
+            // Evitamos dibujar la línea amarilla en medio de la intersección (se ve más realista)
+            if (local_x > offset && local_x < cell_size_ - offset) continue;
+
+            sf::RectangleShape dash(sf::Vector2f(8, 2));
+            dash.setPosition(i, center_y - 1);
+            dash.setFillColor(dash_color);
+            window_.draw(dash);
+        }
+    }
+
+    // 2. Dibujar todas las calles verticales
+    for (int x = 0; x < grid_size; ++x) {
+        float pos_x = x * cell_size_ + offset;
+        
+        // Asfalto continuo
+        sf::RectangleShape road(sf::Vector2f(road_width, total_size));
+        road.setPosition(pos_x, 0);
+        road.setFillColor(asphalt_color);
+        window_.draw(road);
+
+        // Línea central punteada
+        float center_x = x * cell_size_ + cell_size_ / 2.0f;
+        for (int i = 0; i < total_size; i += 15) {
+            int local_y = i % cell_size_;
+            // Evitamos dibujar en medio de la intersección
+            if (local_y > offset && local_y < cell_size_ - offset) continue;
+
+            sf::RectangleShape dash(sf::Vector2f(2, 8));
+            dash.setPosition(center_x - 1, i);
+            dash.setFillColor(dash_color);
+            window_.draw(dash);
         }
     }
 }
 
 void SimulationWindow::drawIntersections() {
     int grid_size = city_->getGridSize();
+    float road_width = cell_size_ * 0.6f; 
+    float offset = (cell_size_ - road_width) / 2.0f;
     
     for (int y = 0; y < grid_size; ++y) {
         for (int x = 0; x < grid_size; ++x) {
             float pos_x = x * cell_size_;
             float pos_y = y * cell_size_;
             
-            // Draw intersection base
-            sf::RectangleShape intersection(sf::Vector2f(cell_size_, cell_size_));
-            intersection.setPosition(pos_x, pos_y);
-            intersection.setFillColor(intersection_color_);
-            
-            // Get traffic light color
             sf::Color light_color = getTrafficLightColor(x, y);
             
-            // Draw intersection with traffic light indicator
-            sf::CircleShape light_indicator(cell_size_ / 4.0f);
-            light_indicator.setPosition(pos_x + cell_size_ / 2.0f - cell_size_ / 4.0f,
-                                       pos_y + cell_size_ / 2.0f - cell_size_ / 4.0f);
-            light_indicator.setFillColor(light_color);
-            
-            // Add glow effect for traffic lights
-            if (light_color == green_light_ || 
-                light_color == yellow_light_ || 
-                light_color == red_light_) {
-                sf::CircleShape glow(cell_size_ / 3.0f);
-                glow.setPosition(pos_x + cell_size_ / 2.0f - cell_size_ / 3.0f,
-                                pos_y + cell_size_ / 2.0f - cell_size_ / 3.0f);
-                glow.setFillColor(sf::Color(light_color.r, light_color.g, light_color.b, 50));
+            // Solo dibujamos semáforos donde la lógica dice que existen
+            if (light_color != intersection_color_) {
+                float housing_size = cell_size_ * 0.15f;
+                
+                // Poste/Caja del semáforo en la esquina superior izquierda de la intersección
+                sf::RectangleShape housing(sf::Vector2f(housing_size, housing_size));
+                housing.setPosition(pos_x + offset - housing_size, pos_y + offset - housing_size);
+                housing.setFillColor(sf::Color(20, 20, 25)); // Gris muy oscuro
+                window_.draw(housing);
+                
+                // La luz del semáforo
+                sf::CircleShape light(housing_size * 0.35f);
+                // Centramos la luz dentro de la cajita
+                light.setPosition(pos_x + offset - housing_size + (housing_size * 0.15f), 
+                                  pos_y + offset - housing_size + (housing_size * 0.15f));
+                light.setFillColor(light_color);
+                
+                // Efecto de resplandor (Glow)
+                sf::CircleShape glow(housing_size * 0.8f);
+                glow.setPosition(pos_x + offset - housing_size - (housing_size * 0.3f), 
+                                 pos_y + offset - housing_size - (housing_size * 0.3f));
+                glow.setFillColor(sf::Color(light_color.r, light_color.g, light_color.b, 60));
+                
                 window_.draw(glow);
+                window_.draw(light);
             }
-            
-            window_.draw(intersection);
-            window_.draw(light_indicator);
         }
     }
 }
@@ -208,21 +237,36 @@ void SimulationWindow::drawIntersections() {
 void SimulationWindow::drawVehicles() {
     if (!vehicles_) return;
     
+    // PASO A: Dibujar primero la RUTA PLANEADA para que quede debajo de los autos
+    for (const auto& vehicle : *vehicles_) {
+        if (vehicle.remaining_path.size() > 1) {
+            // LineStrip conecta una lista de puntos
+            sf::VertexArray routeLines(sf::LineStrip, vehicle.remaining_path.size() + 1);
+            
+            float start_x = vehicle.x * cell_size_ + cell_size_ / 2.0f;
+            float start_y = vehicle.y * cell_size_ + cell_size_ / 2.0f;
+            routeLines[0].position = sf::Vector2f(start_x, start_y);
+            
+            // Usamos el mismo color del auto, pero muy transparente
+            sf::Color routeColor = Renderer::getVehicleColor(vehicle.id);
+            routeColor.a = 90; 
+            routeLines[0].color = routeColor;
+            
+            for (size_t i = 0; i < vehicle.remaining_path.size(); ++i) {
+                float px = vehicle.remaining_path[i].x * cell_size_ + cell_size_ / 2.0f;
+                float py = vehicle.remaining_path[i].y * cell_size_ + cell_size_ / 2.0f;
+                routeLines[i+1].position = sf::Vector2f(px, py);
+                routeLines[i+1].color = routeColor;
+            }
+            window_.draw(routeLines);
+        }
+    }
+    
+    // PASO B: Dibujar los autos
     for (const auto& vehicle : *vehicles_) {
         float pos_x = vehicle.x * cell_size_ + cell_size_ / 2.0f;
         float pos_y = vehicle.y * cell_size_ + cell_size_ / 2.0f;
-        
-        sf::Color color = Renderer::getVehicleColor(vehicle.id);
-        
-        sf::CircleShape shape(cell_size_ / 4.0f);
-        shape.setPosition(pos_x - cell_size_ / 4.0f, pos_y - cell_size_ / 4.0f);
-        shape.setFillColor(color);
-        
-        if (vehicle.is_waiting) {
-            shape.setFillColor(sf::Color(color.r, color.g, color.b, 150));
-        }
-        
-        window_.draw(shape);
+        Renderer::drawVehicle(window_, pos_x, pos_y, cell_size_ / 3.0f, vehicle.id, vehicle.is_waiting, vehicle.angle);
     }
 }
 
@@ -254,17 +298,18 @@ void SimulationWindow::close() {
     }
 }
 
-void SimulationWindow::run() {
+void SimulationWindow::run(traffic_simulation::SimulationController& controller) {
+    std::vector<gui::VehicleRenderInfo> render_info;
+    
     while (isOpen()) {
         handleEvents();
         
         if (!is_paused_) {
-            // Add any per-frame update logic here if needed
+            render_info = controller.getVehicleManager().getRenderInfo();
+            setVehicles(&render_info);
         }
         
-        render();
-        
-        // Small delay to control frame rate
+        render(); 
         sf::sleep(sf::milliseconds(16));
     }
 }

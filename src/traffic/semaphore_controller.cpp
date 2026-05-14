@@ -15,7 +15,7 @@ SemaphoreController::~SemaphoreController() {
     stopAll();
 }
 
-void SemaphoreController::initialize(city::City& city, int num_semaphores) {
+    void SemaphoreController::initialize(city::City& city, int num_semaphores, int green, int yellow, int red) {
     if (!city.isInitialized()) {
         throw std::runtime_error("City must be initialized before semaphore controller");
     }
@@ -51,7 +51,7 @@ void SemaphoreController::initialize(city::City& city, int num_semaphores) {
             city::Coordinate coord{i, i};
             auto intersection = city.getIntersection(coord);
             if (intersection) {
-                auto semaphore = std::make_unique<Semaphore>(intersection->getId());
+                auto semaphore = std::make_unique<Semaphore>(intersection->getId(), green, yellow, red);
                 semaphore->start();
                 
                 semaphores_.push_back(std::move(semaphore));
@@ -84,7 +84,7 @@ void SemaphoreController::initialize(city::City& city, int num_semaphores) {
     for (const auto& coord : candidates) {
         auto intersection = city.getIntersection(coord);
         if (intersection) {
-            auto semaphore = std::make_unique<Semaphore>(intersection->getId());
+            auto semaphore = std::make_unique<Semaphore>(intersection->getId(), green, yellow, red);
             semaphore->start();
             
             semaphores_.push_back(std::move(semaphore));

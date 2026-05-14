@@ -43,6 +43,8 @@ void VehicleManager::initialize(int vehicle_count) {
         // Set route (this also initializes vehicle position)
         vehicle->setRoute(start, dest, const_cast<city::City&>(city_));
         
+        vehicle->setSemaphoreController(semaphore_controller_);
+        
         // Start the vehicle thread
         vehicle->startThread();
         
@@ -110,6 +112,43 @@ std::size_t VehicleManager::getTotalVehicleCount() const {
     return total_vehicles_.load();
 }
 
+std::vector<gui::VehicleRenderInfo> VehicleManager::getRenderInfo() const {
+    std::vector<gui::VehicleRenderInfo> render_list;
+    render_list.reserve(vehicles_.size());
+    
+    for (const auto& vehicle : vehicles_) {
+        city::Coordinate current = vehicle->getPosition();
+        city::Coordinate next = vehicle->getNextPosition();
+        
+        // AQUÍ COLOCAMOS TU FÓRMULA
+        float dx = next.x - current.x;
+        float dy = next.y - current.y;
+        float angle = 0.0f;
+        
+        // Si el vehículo se está moviendo o tiene una dirección clara
+        if (dx != 0 || dy != 0) {
+            angle = std::atan2(dy, dx) * 180.0f / 3.14159265f;
+        }
+        
+        // Creamos la estructura visual con el ángulo
+        gui::VehicleRenderInfo info(
+            vehicle->getId(), 
+            current.x, current.y, 
+            current.x, current.y,
+            angle
+        );
+        
+        info.is_waiting = (vehicle->getState() == traffic_simulation::VehicleState::WAITING || 
+                           vehicle->getState() == traffic_simulation::VehicleState::BLOCKED);
+                           
+        info.remaining_path = vehicle->getRemainingPath();
+        
+        render_list.push_back(info);
+    }
+    
+    return render_list;
+}
+
 void VehicleManager::shutdown() {
     for (auto& vehicle : vehicles_) {
         vehicle->stopThread();
@@ -136,6 +175,10 @@ city::Coordinate VehicleManager::generateDestination(
     } while (dest == start && city_.getGridSize() > 1);
     
     return dest;
+}
+
+void VehicleManager::setSemaphoreController(const traffic::SemaphoreController* controller) {
+    semaphore_controller_ = controller;
 }
 
 } // namespace vehicle

@@ -7,6 +7,7 @@
 
 #include "vehicle/vehicle.hpp"
 #include "vehicle/pathfinder.hpp"
+#include <cmath>
 
 namespace vehicle {
 
@@ -64,7 +65,7 @@ void Vehicle::run() {
             current_state == traffic_simulation::VehicleState::BLOCKED) {
             
             // Check if we can advance
-            if (city_ && canAdvance(*city_, nullptr)) {
+            if (city_ && canAdvance(*city_, semaphore_controller_)) {
                 advance();
             } else {
                 // Record wait time
@@ -90,7 +91,7 @@ void Vehicle::run() {
         }
         else if (current_state == traffic_simulation::VehicleState::MOVING) {
             // Simulate movement time
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
             
             // After moving, set to waiting for next intersection
             setState(traffic_simulation::VehicleState::WAITING);
@@ -177,6 +178,16 @@ city::Coordinate Vehicle::getPosition() const {
     return position_;
 }
 
+city::Coordinate Vehicle::getNextPosition() const {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    // Si aún hay camino por recorrer, devolvemos la siguiente celda
+    if (path_index_ < current_path_.size()) {
+        return current_path_[path_index_];
+    }
+    // Si ya llegó, la siguiente posición es la actual
+    return position_; 
+}
+
 int Vehicle::getId() const {
     return id_;
 }
@@ -208,6 +219,20 @@ void Vehicle::notifyConditionsChanged() {
 
 void Vehicle::setState(traffic_simulation::VehicleState new_state) {
     state_ = new_state;
+}
+
+std::vector<city::Coordinate> Vehicle::getRemainingPath() const {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    std::vector<city::Coordinate> path;
+    // Extraemos solo el camino que le falta por recorrer
+    for (std::size_t i = path_index_; i < current_path_.size(); ++i) {
+        path.push_back(current_path_[i]);
+    }
+    return path;
+}
+
+void Vehicle::setSemaphoreController(const traffic::SemaphoreController* controller) {
+    semaphore_controller_ = controller;
 }
 
 } // namespace vehicle
