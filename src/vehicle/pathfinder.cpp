@@ -8,6 +8,7 @@
 #include "vehicle/pathfinder.hpp"
 #include "city/city.hpp"
 #include "city/intersection.hpp"
+#include "city/street.hpp"
 #include <limits>
 #include <algorithm>
 #include <map>
@@ -26,21 +27,24 @@ std::vector<city::Coordinate> Pathfinder::getNeighbors(
     
     std::vector<city::Coordinate> neighbors;
     
-    // Four directions: N, S, E, W (no diagonals)
-    const city::Coordinate directions[] = {
-        {0, -1},  // NORTH
-        {0, 1},   // SOUTH
-        {1, 0},   // EAST
-        {-1, 0}   // WEST
+    const std::pair<city::Coordinate, city::Direction> moves[] = {
+        {{0, -1}, city::Direction::NORTH},
+        {{0, 1},  city::Direction::SOUTH},
+        {{1, 0},  city::Direction::EAST},
+        {{-1, 0}, city::Direction::WEST}
     };
     
-    for (const auto& dir : directions) {
-        auto neighbor = coord + dir;
-        if (city.isValidCoordinate(neighbor)) {
-            // Check if intersection exists at this location
-            auto intersection = city.getIntersection(neighbor);
+    for (const auto& [dir_coord, travel_dir] : moves) {
+        auto neighbor_coord = coord + dir_coord;
+        
+        if (city.isValidCoordinate(neighbor_coord)) {
+            auto intersection = city.getIntersection(neighbor_coord);
             if (intersection) {
-                neighbors.push_back(neighbor);
+                // NUEVO: Verificamos si existe calle y si nos permite viajar en esa dirección
+                auto street = city.getStreet(coord, neighbor_coord);
+                if (street && street->canTravel(travel_dir)) {
+                    neighbors.push_back(neighbor_coord);
+                }
             }
         }
     }

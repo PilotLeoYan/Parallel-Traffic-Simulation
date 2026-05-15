@@ -69,6 +69,15 @@ public:
                            const sf::Color& color = sf::Color(100, 100, 100));
 
     /**
+     * @brief Dibuja una flecha direccional en el mapa
+     */
+    static void drawArrow(sf::RenderWindow& window,
+                          float x, float y, 
+                          float angle_degrees, 
+                          float size, 
+                          const sf::Color& color);
+    
+    /**
      * @brief Generate a consistent color from a vehicle ID
      * @param vehicle_id Vehicle identifier
      * @return SFML Color for the vehicle

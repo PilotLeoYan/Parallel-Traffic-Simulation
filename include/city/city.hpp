@@ -42,6 +42,8 @@ public:
     void addStreet(std::shared_ptr<StreetSegment> street);
     const std::vector<std::shared_ptr<StreetSegment>>& getStreets() const;
 
+    std::shared_ptr<StreetSegment> getStreet(const Coordinate& from, const Coordinate& to) const;
+
     // Grid properties
     int getGridSize() const;
 
@@ -54,6 +56,7 @@ private:
     std::vector<std::shared_ptr<StreetSegment>> streets_;
 
     void initializeIntersections();
+    void initializeStreets();
 };
 
 }  // namespace city

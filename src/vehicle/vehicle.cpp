@@ -8,6 +8,8 @@
 #include "vehicle/vehicle.hpp"
 #include "vehicle/pathfinder.hpp"
 #include <cmath>
+#include "common/logger.hpp"
+#include "city/street.hpp"
 
 namespace vehicle {
 
@@ -151,7 +153,18 @@ void Vehicle::advance() {
     std::lock_guard<std::mutex> lock(state_mutex_);
     
     if (path_index_ < current_path_.size()) {
-        position_ = current_path_[path_index_];
+        auto next_pos = current_path_[path_index_];
+        
+        if (city_) {
+            auto street = city_->getStreet(position_, next_pos);
+            if (street) {
+                traffic_simulation::Logger::getInstance().info(
+                    "Vehículo " + std::to_string(id_) + 
+                    " transitando por " + street->getName());
+            }
+        }
+
+        position_ = next_pos;
         ++path_index_;
         setState(traffic_simulation::VehicleState::MOVING);
     }

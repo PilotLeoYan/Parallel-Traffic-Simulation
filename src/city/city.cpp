@@ -16,6 +16,7 @@ void City::initialize(int grid_size) {
     intersections_.resize(grid_size);
 
     initializeIntersections();
+    initializeStreets();
 }
 
 void City::initializeIntersections() {
@@ -62,6 +63,46 @@ std::vector<std::shared_ptr<Intersection>> City::getNeighbors(const Coordinate& 
     }
 
     return neighbors;
+}
+
+std::shared_ptr<StreetSegment> City::getStreet(const Coordinate& from, const Coordinate& to) const {
+    for (const auto& street : streets_) {
+        auto start = street->getStartIntersection()->getCoordinate();
+        auto end = street->getEndIntersection()->getCoordinate();
+        // Revisamos si la calle conecta estos dos puntos (en cualquier sentido físico)
+        if ((start == from && end == to) || (start == to && end == from)) {
+            return street;
+        }
+    }
+    return nullptr;
+}
+
+void City::initializeStreets() {
+    // NOMBRES DE CALLES AQUI 
+    std::vector<std::string> h_names = {"Av. Vallarta", "Av. Lazaro Cardenas", "Av. Patria", "Av. Americas", "Av. Niños Heroes", "Av. Mexico", "Calle Hidalgo", "Calle Morelos", "Av. Juarez", "Av. La Paz", "Av. Circunvalacion", "Av. Javier Mina"};
+    std::vector<std::string> v_names = {"Calz. Independencia", "Av. Federalismo", "Av. Enrique Diaz", "Av. Lopez Mateos", "Av. Mariano Otero", "Av. Cruz del Sur", "Av. Copernico", "Av. Rafael Sanzio", "Calle Acueducto", "Calle Chapalita", "Calle Revolucion", "Av. Alcalde"};
+
+    for (int y = 0; y < grid_size_; ++y) {
+        for (int x = 0; x < grid_size_; ++x) {
+            auto current = getIntersectionAt(x, y);
+            
+            // Calles Horizontales (Hacia el Este)
+            if (x < grid_size_ - 1) {
+                auto east = getIntersectionAt(x + 1, y);
+                std::string name = (y < h_names.size()) ? h_names[y] : "Calle H-" + std::to_string(y);
+                bool is_two_way = (y % 2 == 0); // Alternamos doble sentido y un solo sentido
+                addStreet(std::make_shared<StreetSegment>(current, east, name, is_two_way));
+            }
+            
+            // Calles Verticales (Hacia el Sur)
+            if (y < grid_size_ - 1) {
+                auto south = getIntersectionAt(x, y + 1);
+                std::string name = (x < v_names.size()) ? v_names[x] : "Calle V-" + std::to_string(x);
+                bool is_two_way = (x % 2 != 0); // Alternamos doble sentido y un solo sentido
+                addStreet(std::make_shared<StreetSegment>(current, south, name, is_two_way));
+            }
+        }
+    }
 }
 
 bool City::isValidCoordinate(const Coordinate& coord) const {

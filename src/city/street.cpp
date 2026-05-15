@@ -7,9 +7,11 @@ namespace city {
 
 StreetSegment::StreetSegment(std::shared_ptr<Intersection> start,
                              std::shared_ptr<Intersection> end,
+                             const std::string& name,
                              bool is_two_way)
     : start_intersection_(std::move(start))
     , end_intersection_(std::move(end))
+    , name_(name) // <-- NUEVO
     , is_two_way_(is_two_way)
 {
     if (!start_intersection_ || !end_intersection_) {
@@ -43,6 +45,10 @@ std::shared_ptr<Intersection> StreetSegment::getEndIntersection() const {
 
 bool StreetSegment::isTwoWay() const {
     return is_two_way_;
+}
+
+std::string StreetSegment::getName() const {
+    return name_;
 }
 
 Direction StreetSegment::getDirection() const {
