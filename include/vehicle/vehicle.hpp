@@ -73,8 +73,9 @@ public:
 
     /**
      * @brief Move the vehicle to the next position in the path
+     * @return true si logró adquirir el lock y avanzar, false si hubo colisión y no pudo.
      */
-    void advance();
+    bool advance();
 
     /**
      * @brief Block the vehicle until it can proceed
@@ -156,6 +157,7 @@ private:
     void setState(traffic_simulation::VehicleState new_state);
 
     int id_;
+    int blocked_ticks_ = 0;
     city::Coordinate position_;
     city::Coordinate destination_;
     std::vector<city::Coordinate> current_path_;

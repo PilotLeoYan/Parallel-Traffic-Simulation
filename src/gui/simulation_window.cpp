@@ -106,7 +106,7 @@ void SimulationWindow::render() {
     
     if (!city_) return;
     
-    int grid_size = city_->getGridSize();
+    //int grid_size = city_->getGridSize();
     
     // Draw grid background
     drawGrid();

@@ -66,24 +66,69 @@ void Vehicle::run() {
         if (current_state == traffic_simulation::VehicleState::WAITING ||
             current_state == traffic_simulation::VehicleState::BLOCKED) {
             
-            // Check if we can advance
+            bool advanced = false;
+            
+            // Intentamos avanzar
             if (city_ && canAdvance(*city_, semaphore_controller_)) {
-                advance();
-            } else {
-                // Record wait time
+                if (advance()) {
+                    advanced = true;
+                    blocked_ticks_ = 0; // Se logró mover, reiniciamos el contador de frustración
+                    continue; 
+                }
+            }
+            
+            // NUEVO: Analizamos por qué no pudimos avanzar
+            if (!advanced) {
+                bool blocked_by_light = false;
+                
+                // Verificamos si hay un semáforo en rojo en la siguiente celda
+                if (city_ && semaphore_controller_ && path_index_ < current_path_.size()) {
+                    auto next_pos = current_path_[path_index_];
+                    auto semaphore = semaphore_controller_->getSemaphoreAt(next_pos);
+                    if (semaphore && !semaphore->isGreen()) {
+                        blocked_by_light = true;
+                    }
+                }
+
+                if (blocked_by_light) {
+                    // Somos pacientes en el semáforo, reseteamos la frustración
+                    blocked_ticks_ = 0;
+                } else {
+                    // Si el semáforo está en verde (o no hay) y NO pudimos avanzar,
+                    // hay otro auto bloqueando. Aumentamos la frustración.
+                    blocked_ticks_++;
+                    
+                    // Si lleva más de 15 ticks atorado, iniciamos RECUPERACIÓN DE DEADLOCK
+                    if (blocked_ticks_ > 15 && path_index_ < current_path_.size()) {
+                        auto node_to_avoid = current_path_[path_index_];
+                        
+                        traffic_simulation::Logger::getInstance().warning(
+                            "Vehículo " + std::to_string(id_) + " detectó colisión frontal/Deadlock. Re-calculando ruta...");
+
+                        // Calculamos ruta alterna ignorando el carro que nos bloquea
+                        auto new_path = Pathfinder::findPath(position_, destination_, *city_, node_to_avoid);
+                        
+                        if (!new_path.empty() && new_path.size() > 1) {
+                            std::lock_guard<std::mutex> lock(state_mutex_);
+                            current_path_ = new_path;
+                            path_index_ = 1; 
+                            blocked_ticks_ = 0; // Reseteamos contador
+                        }
+                    }
+                }
+                
+                // --- CÓDIGO DE ESPERA ORIGINAL ---
                 if (!is_waiting_.load()) {
                     wait_start_ = std::chrono::steady_clock::now();
                     is_waiting_ = true;
                 }
                 
-                // Block using condition variable
                 std::unique_lock<std::mutex> lock(state_mutex_);
                 cv_.wait_for(lock, std::chrono::milliseconds(100), [this] {
                     return conditions_changed_.load() || !running_.load();
                 });
                 conditions_changed_ = false;
                 
-                // Accumulate wait time
                 if (is_waiting_.load()) {
                     auto wait_duration = std::chrono::steady_clock::now() - wait_start_;
                     wait_time_.store(wait_time_.load() + std::chrono::duration<double>(wait_duration).count());
@@ -91,9 +136,10 @@ void Vehicle::run() {
                 }
             }
         }
+
         else if (current_state == traffic_simulation::VehicleState::MOVING) {
             // Simulate movement time
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             
             // After moving, set to waiting for next intersection
             setState(traffic_simulation::VehicleState::WAITING);
@@ -104,6 +150,15 @@ void Vehicle::run() {
             arrival_time_ = std::chrono::steady_clock::now();
             auto travel_duration = arrival_time_ - start_time_;
             total_travel_time_ = std::chrono::duration<double>(travel_duration).count();
+            
+            // NUEVO: Libera bloqueo de la intersección destino final
+            if (city_) {
+                auto final_intersection = city_->getIntersection(position_);
+                if (final_intersection) {
+                    final_intersection->unlock();
+                }
+            }
+
             setState(traffic_simulation::VehicleState::ARRIVED);
             break;
         }
@@ -149,13 +204,36 @@ bool Vehicle::canAdvance(city::City& city, const traffic::SemaphoreController* s
     return false;
 }
 
-void Vehicle::advance() {
+bool Vehicle::advance() {
     std::lock_guard<std::mutex> lock(state_mutex_);
     
     if (path_index_ < current_path_.size()) {
         auto next_pos = current_path_[path_index_];
         
         if (city_) {
+            auto next_intersection = city_->getIntersection(next_pos);
+            auto current_intersection = city_->getIntersection(position_);
+            
+            // Si nos movemos a una intersección diferente
+            if (next_pos != position_) {
+                if (next_intersection) {
+                    // 1. Intentar adquirir el lock de la intersección (mutex)
+                    if (!next_intersection->try_lock()) {
+                        return false; // La intersección fue ocupada en el último milisegundo
+                    }
+                }
+                
+                // 2. Libera bloqueo de la intersección anterior
+                if (current_intersection) {
+                    current_intersection->unlock();
+                }
+            } else if (path_index_ == 0) {
+                // Es el inicio de la simulación para este vehículo, asegura su posición inicial
+                if (next_intersection) {
+                    if (!next_intersection->try_lock()) return false;
+                }
+            }
+
             auto street = city_->getStreet(position_, next_pos);
             if (street) {
                 traffic_simulation::Logger::getInstance().info(
@@ -167,7 +245,9 @@ void Vehicle::advance() {
         position_ = next_pos;
         ++path_index_;
         setState(traffic_simulation::VehicleState::MOVING);
+        return true; // Éxito al avanzar
     }
+    return false;
 }
 
 void Vehicle::waitAtIntersection() {
