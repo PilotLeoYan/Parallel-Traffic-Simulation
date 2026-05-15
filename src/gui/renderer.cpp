@@ -204,4 +204,23 @@ sf::RectangleShape Renderer::makeRoundedRect(float x, float y, float width, floa
     return rect;
 }
 
+void Renderer::drawArrow(sf::RenderWindow& window, 
+                         float x, float y, 
+                         float angle_degrees, 
+                         float size, 
+                         const sf::Color& color) {
+    // Usamos ConvexShape para hacer un triángulo apuntando hacia la derecha (0 grados)
+    sf::ConvexShape arrow(3);
+    arrow.setPoint(0, sf::Vector2f(size, 0));             // Punta de la flecha
+    arrow.setPoint(1, sf::Vector2f(-size/2.0f, size/2.0f));  // Esquina inferior
+    arrow.setPoint(2, sf::Vector2f(-size/2.0f, -size/2.0f)); // Esquina superior
+    
+    arrow.setOrigin(0, 0);
+    arrow.setPosition(x, y);
+    arrow.setRotation(angle_degrees);
+    arrow.setFillColor(color);
+    
+    window.draw(arrow);
+}
+
 } // namespace gui

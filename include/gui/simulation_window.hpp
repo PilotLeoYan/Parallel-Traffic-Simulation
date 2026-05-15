@@ -180,6 +180,11 @@ private:
     void drawStreets();
 
     /**
+     * @brief Draw directional arrows on streets
+     */
+    void drawStreetDirections();
+
+    /**
      * @brief Draw all vehicles as colored circles
      */
     void drawVehicles();

@@ -106,14 +106,17 @@ void SimulationWindow::render() {
     
     if (!city_) return;
     
-    int grid_size = city_->getGridSize();
+    //int grid_size = city_->getGridSize();
     
     // Draw grid background
     drawGrid();
     
     // Draw streets
     drawStreets();
-    
+
+    // Draw street directions
+    drawStreetDirections();
+
     // Draw intersections with traffic lights
     drawIntersections();
     
@@ -188,6 +191,59 @@ void SimulationWindow::drawStreets() {
             dash.setPosition(center_x - 1, i);
             dash.setFillColor(dash_color);
             window_.draw(dash);
+        }
+    }
+}
+
+void SimulationWindow::drawStreetDirections() {
+    if (!city_) return;
+    
+    // Obtenemos todas las calles reales generadas en el mapa
+    const auto& streets = city_->getStreets();
+    
+    // Color blanco semi-transparente para que parezca pintura en el asfalto
+    sf::Color arrow_color(220, 220, 220, 140); 
+    float arrow_size = cell_size_ * 0.2f;
+
+    for (const auto& street : streets) {
+        auto start = street->getStartIntersection()->getCoordinate();
+        auto end = street->getEndIntersection()->getCoordinate();
+        
+        // Convertimos las coordenadas de la cuadrícula a píxeles en pantalla
+        float start_px_x = start.x * cell_size_ + cell_size_ / 2.0f;
+        float start_px_y = start.y * cell_size_ + cell_size_ / 2.0f;
+        float end_px_x = end.x * cell_size_ + cell_size_ / 2.0f;
+        float end_px_y = end.y * cell_size_ + cell_size_ / 2.0f;
+        
+        // Calculamos el centro exacto del tramo de la calle
+        float center_x = (start_px_x + end_px_x) / 2.0f;
+        float center_y = (start_px_y + end_px_y) / 2.0f;
+        
+        city::Direction dir = street->getDirection();
+        float angle = 0.0f;
+        float dx = 0.0f, dy = 0.0f; // Offset para separar carriles
+        
+        // Calculamos el ángulo y el desplazamiento lateral dependiendo hacia dónde va la calle
+        // (El carril derecho de avance siempre tiene un pequeño offset)
+        if (dir == city::Direction::EAST) { 
+            angle = 0.0f;   dy = cell_size_ * 0.15f; 
+        } else if (dir == city::Direction::SOUTH) { 
+            angle = 90.0f;  dx = -cell_size_ * 0.15f; 
+        } else if (dir == city::Direction::WEST) { 
+            angle = 180.0f; dy = -cell_size_ * 0.15f; 
+        } else if (dir == city::Direction::NORTH) { 
+            angle = -90.0f; dx = cell_size_ * 0.15f; 
+        }
+
+        if (street->isTwoWay()) {
+            // Si es de doble sentido, dibujamos dos flechas pequeñas en carriles opuestos
+            // Carril de ida
+            Renderer::drawArrow(window_, center_x + dx, center_y + dy, angle, arrow_size * 0.6f, arrow_color);
+            // Carril de venida (ángulo invertido y posición opuesta)
+            Renderer::drawArrow(window_, center_x - dx, center_y - dy, angle + 180.0f, arrow_size * 0.6f, arrow_color);
+        } else {
+            // Si es de un solo sentido, dibujamos una flecha más grande justo en el centro
+            Renderer::drawArrow(window_, center_x, center_y, angle, arrow_size, arrow_color);
         }
     }
 }

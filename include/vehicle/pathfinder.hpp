@@ -52,7 +52,8 @@ public:
     static std::vector<city::Coordinate> findPath(
         const city::Coordinate& start,
         const city::Coordinate& goal,
-        const city::City& city);
+        const city::City& city,
+        const city::Coordinate& avoid = {-1, -1});
 
     /**
      * @brief Find paths for multiple vehicles in parallel using OpenMP
@@ -79,7 +80,8 @@ private:
      */
     static std::vector<city::Coordinate> getNeighbors(
         const city::Coordinate& coord,
-        const city::City& city);
+        const city::City& city,
+        const city::Coordinate& avoid = {-1, -1});
 };
 
 } // namespace vehicle

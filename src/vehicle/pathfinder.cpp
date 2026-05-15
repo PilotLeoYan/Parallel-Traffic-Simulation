@@ -8,6 +8,7 @@
 #include "vehicle/pathfinder.hpp"
 #include "city/city.hpp"
 #include "city/intersection.hpp"
+#include "city/street.hpp"
 #include <limits>
 #include <algorithm>
 #include <map>
@@ -22,36 +23,37 @@ int Pathfinder::heuristic(const city::Coordinate& a,
 
 std::vector<city::Coordinate> Pathfinder::getNeighbors(
     const city::Coordinate& coord,
-    const city::City& city) {
-    
+    const city::City& city,
+    const city::Coordinate& avoid) { 
     std::vector<city::Coordinate> neighbors;
-    
-    // Four directions: N, S, E, W (no diagonals)
-    const city::Coordinate directions[] = {
-        {0, -1},  // NORTH
-        {0, 1},   // SOUTH
-        {1, 0},   // EAST
-        {-1, 0}   // WEST
+    const std::pair<city::Coordinate, city::Direction> moves[] = {
+        {{0, -1}, city::Direction::NORTH},
+        {{0, 1},  city::Direction::SOUTH},
+        {{1, 0},  city::Direction::EAST},
+        {{-1, 0}, city::Direction::WEST}
     };
     
-    for (const auto& dir : directions) {
-        auto neighbor = coord + dir;
-        if (city.isValidCoordinate(neighbor)) {
-            // Check if intersection exists at this location
-            auto intersection = city.getIntersection(neighbor);
-            if (intersection) {
-                neighbors.push_back(neighbor);
+    for (const auto& [dir_coord, travel_dir] : moves) {
+        auto neighbor_coord = coord + dir_coord;
+        
+        if (city.isValidCoordinate(neighbor_coord)) {
+            auto street = city.getStreet(coord, neighbor_coord);
+            if (street && street->canTravel(travel_dir)) {
+                // NUEVO: Solo agregamos el vecino si NO es el nodo bloqueado
+                if (neighbor_coord != avoid) {
+                    neighbors.push_back(neighbor_coord);
+                }
             }
         }
     }
-    
     return neighbors;
 }
 
 std::vector<city::Coordinate> Pathfinder::findPath(
     const city::Coordinate& start,
     const city::Coordinate& goal,
-    const city::City& city) {
+    const city::City& city,
+    const city::Coordinate& avoid){
     
     std::vector<city::Coordinate> path;
     
@@ -102,7 +104,7 @@ std::vector<city::Coordinate> Pathfinder::findPath(
         closed_set.insert(current.coord);
         
         // Explore neighbors
-        auto neighbors = getNeighbors(current.coord, city);
+        auto neighbors = getNeighbors(current.coord, city, avoid);
         
         for (const auto& neighbor : neighbors) {
             // Skip if already visited

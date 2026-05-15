@@ -3,6 +3,7 @@
 #include <mutex>
 #include <cstddef>
 #include <functional>
+#include <atomic>
 
 namespace city {
 
@@ -82,7 +83,7 @@ private:
     int x_;
     int y_;
     mutable std::mutex mutex_;
-    bool is_occupied_ = false;
+    std::atomic<bool> is_occupied_{false};
     int congestion_level_ = 0;
 };
 

@@ -4,7 +4,8 @@
 namespace city {
 
 Intersection::Intersection(size_t id, int x, int y)
-    : id_(id), x_(x), y_(y), is_occupied_(false), congestion_level_(0) {}
+    : id_(id), x_(x), y_(y), congestion_level_(0) {
+    is_occupied_.store(false); }
 
 void Intersection::lock() {
     mutex_.lock();
@@ -25,8 +26,7 @@ void Intersection::unlock() {
 }
 
 bool Intersection::isAvailable() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return !is_occupied_;
+    return !is_occupied_.load();
 }
 
 int Intersection::getCongestion() const {
