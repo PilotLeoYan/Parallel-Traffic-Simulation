@@ -1,0 +1,29 @@
+name: PR Build Check
+
+# Runs every time a pull request is opened, synced, or reopened to the ‘main’ branch
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Get the source code from the PR
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # 2. Install the exact dependencies listed in your README
+    - name: Install dependencies (Ubuntu)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libsfml-dev libomp-dev
+
+    # 3. Configure CMake
+    - name: Configure CMake
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+    # 4. Compile the proyect
+    - name: Build Project
+      run: cmake --build build --config Release
