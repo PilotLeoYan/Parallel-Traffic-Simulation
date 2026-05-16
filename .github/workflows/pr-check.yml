@@ -1,29 +1,38 @@
 name: PR Build Check
 
-# Runs every time a pull request is opened, synced, or reopened to the ‘main’ branch
 on:
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-    # 1. Get the source code from the PR
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 2. Install the exact dependencies listed in your README
     - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y cmake libsfml-dev libomp-dev
 
-    # 3. Configure CMake
-    - name: Configure CMake
+    - name: Install dependencies (Windows)
+      if: matrix.os == 'windows-latest'
+      run: vcpkg install sfml:x64-windows
+
+    - name: Configure CMake (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
       run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
-    # 4. Compile the proyect
+    - name: Configure CMake (Windows)
+      if: matrix.os == 'windows-latest'
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+
     - name: Build Project
       run: cmake --build build --config Release
