@@ -1,29 +1,49 @@
 name: PR Build Check
 
-# Runs every time a pull request is opened, synced, or reopened to the ‘main’ branch
 on:
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-    # 1. Get the source code from the PR
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 2. Install the exact dependencies listed in your README
     - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y cmake libsfml-dev libomp-dev
 
-    # 3. Configure CMake
-    - name: Configure CMake
+    - name: Cache SFML 2.6.1 (Windows)
+      if: matrix.os == 'windows-latest'
+      id: cache-sfml
+      uses: actions/cache@v4
+      with:
+        path: C:/SFML
+        key: sfml-2.6.1-vc17-64
+
+    - name: Download SFML 2.6.1 (Windows)
+      if: matrix.os == 'windows-latest' && steps.cache-sfml.outputs.cache-hit != 'true'
+      run: |
+        Invoke-WebRequest -Uri "https://www.sfml-dev.org/files/SFML-2.6.1-windows-vc17-64-bit.zip" -OutFile "SFML.zip"
+        Expand-Archive -Path "SFML.zip" -DestinationPath "C:/SFML"
+
+    - name: Configure CMake (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
       run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
-    # 4. Compile the proyect
+    - name: Configure CMake (Windows)
+      if: matrix.os == 'windows-latest'
+      # run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release "-DSFML_DIR=C:/SFML/SFML-2.6.1/lib/cmake/SFML"
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release "-DSFML_DIR=C:/SFML/SFML-2.6.1/lib/cmake/SFML" "-DCMAKE_CXX_FLAGS=/wd4244 /wd4996"
+
     - name: Build Project
       run: cmake --build build --config Release

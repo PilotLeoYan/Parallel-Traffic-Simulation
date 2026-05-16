@@ -23,11 +23,6 @@ A high-performance traffic simulation system demonstrating concurrency patterns,
 sudo apt-get install cmake libsfml-dev libomp-dev
 ```
 
-**macOS (Homebrew):**
-```bash
-brew install cmake sfml libomp
-```
-
 **Windows (vcpkg):**
 ```bash
 # Install vcpkg first, then:
