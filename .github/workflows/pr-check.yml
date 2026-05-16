@@ -6,9 +6,8 @@ on:
 
 jobs:
   build:
-    # Definition of the operating system matrix
     strategy:
-      fail-fast: false # Allows other operating systems to continue running even if one fails
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
 
@@ -18,18 +17,26 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # OS-based conditional installation
+    - name: Cache vcpkg packages
+      if: matrix.os == 'windows-latest'
+      uses: actions/cache@v4
+      with:
+        path: |
+          build/vcpkg_installed
+          C:\vcpkg\downloads
+          ~\AppData\Local\vcpkg\archives
+        # La clave cambia automáticamente si se modifica vcpkg.json
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+        # Si no hay coincidencia exacta, usa el caché más reciente disponible
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
+
     - name: Install Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y cmake libsfml-dev libomp-dev
 
-    - name: Install Dependencies (Windows)
-      if: matrix.os == 'windows-latest'
-      run: vcpkg install sfml:x64-windows
-
-    # CMake Configuration (with a Windows-specific toolchain/vcpkg)
     - name: Configure CMake
       shell: bash
       run: |

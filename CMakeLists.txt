@@ -14,7 +14,7 @@ find_package(Threads REQUIRED)
 
 # Try to find SFML via CMake first (works on Windows with vcpkg/manual installs)
 # If not found, fall back to pkg-config (for Unix systems without CMake config files)
-find_package(SFML REQUIRED COMPONENTS graphics window system)
+find_package(SFML 2.5 COMPONENTS graphics window system)
 if(NOT SFML_FOUND)
     find_package(PkgConfig)
     if(PkgConfig_FOUND)

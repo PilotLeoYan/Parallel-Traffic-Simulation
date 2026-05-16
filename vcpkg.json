@@ -1,0 +1,7 @@
+{
+  "name": "traffic-simulation",
+  "version": "1.0.0",
+  "dependencies": [
+    "sfml"
+  ]
+}
