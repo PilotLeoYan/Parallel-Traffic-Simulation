@@ -42,7 +42,8 @@ jobs:
 
     - name: Configure CMake (Windows)
       if: matrix.os == 'windows-latest'
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release "-DSFML_DIR=C:/SFML/SFML-2.6.1/lib/cmake/SFML"
+      # run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release "-DSFML_DIR=C:/SFML/SFML-2.6.1/lib/cmake/SFML"
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release "-DSFML_DIR=C:/SFML/SFML-2.6.1/lib/cmake/SFML" "-DCMAKE_CXX_FLAGS=/wd4244 /wd4996"
 
     - name: Build Project
       run: cmake --build build --config Release
