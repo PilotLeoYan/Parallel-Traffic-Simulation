@@ -35,6 +35,7 @@ void printUsage(const char* program_name) {
               << "  --green N          Green light duration in seconds (default: " << constants::DEFAULT_GREEN_DURATION << ")\n"
               << "  --yellow N         Yellow light duration in seconds (default: " << constants::DEFAULT_YELLOW_DURATION << ")\n"
               << "  --red N            Red light duration in seconds (default: " << constants::DEFAULT_RED_DURATION << ")\n"
+              << "  --cell-size N      Cell size in pixels (default: 60)\n"
               << "  --help             Show this help message\n";
 }
 
@@ -84,6 +85,14 @@ traffic_simulation::SimulationConfig parseArguments(int argc, char* argv[]) {
             if (config.red_duration < 1) {
                 config.red_duration = 1;
             }
+        } else if (arg == "--cell-size" && i + 1 < argc) {
+            int cell_size = std::atoi(argv[++i]);
+            if (cell_size < 10) {
+                cell_size = 10;
+            } else if (cell_size > 200) {
+                cell_size = 200;
+            }
+            config.cell_size = cell_size;
         } else {
             std::cerr << "Unknown option: " << arg << "\n";
             printUsage(argv[0]);
@@ -121,20 +130,24 @@ int runHeadless(traffic_simulation::SimulationController& controller) {
 /**
  * @brief Run simulation with GUI
  */
-int runWithGUI(traffic_simulation::SimulationController& controller, 
-               traffic_simulation::SimulationConfig& /*config*/) {
+int runWithGUI(traffic_simulation::SimulationController& controller,
+               traffic_simulation::SimulationConfig& config) {
     std::cout << "Running with GUI...\n";
+
+    // Calculate window size based on grid_size and cell_size
+    int window_width = config.grid_size * config.cell_size + static_cast<int>(config.cell_size * 1.7f);  // Extra padding for street names on the right
+    int window_height = config.grid_size * config.cell_size + 70 + static_cast<int>(config.cell_size * 1.7f);  // Extra space for toolbar + vertical street names
 
     // Initialize GUI window
     gui::SimulationWindow window;
-    if (!window.initialize(900, 700, "City Traffic Simulation")) {
+    if (!window.initialize(window_width, window_height, "City Traffic Simulation")) {
         std::cerr << "Failed to initialize SFML window\n";
         return 1;
     }
 
     window.setCity(&controller.getCity());
     window.setSemaphoreController(&controller.getSemaphoreController());
-    window.setCellSize(40);
+    window.setCellSize(config.cell_size);
 
     // Start simulation
     controller.run();
@@ -170,8 +183,8 @@ int main(int argc, char* argv[]) {
     std::cout << "========== CITY TRAFFIC SIMULATION ==========\n";
     std::cout << "Grid size: " << config.grid_size << "x" << config.grid_size << "\n";
     std::cout << "Vehicles: " << config.vehicle_count << "\n";
-    std::cout << "Timing: green=" << config.green_duration 
-              << "s, yellow=" << config.yellow_duration 
+    std::cout << "Timing: green=" << config.green_duration
+              << "s, yellow=" << config.yellow_duration
               << "s, red=" << config.red_duration << "s\n";
     std::cout << "Mode: " << (headless_mode ? "HEADLESS" : "GUI") << "\n";
     std::cout << "============================================\n\n";

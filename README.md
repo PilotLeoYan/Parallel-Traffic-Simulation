@@ -62,6 +62,8 @@ cmake --build . --config Release
 ./traffic_simulation [options]
 ```
 
+The window size scales dynamically based on the `--cell-size` and `--grid` options, allowing you to adjust the simulation to your display.
+
 ### Command Line Options
 
 | Option | Description | Default |
@@ -69,6 +71,7 @@ cmake --build . --config Release
 | `--no-gui` | Run simulation without GUI (headless mode) | `false` |
 | `--vehicles <N>` | Number of vehicles in simulation | `10` |
 | `--grid <N>` | Grid size (N x N intersections) | `5` |
+| `--cell-size <N>` | Cell size in pixels | `60` |
 | `--green <N>` | Green light duration (seconds) | `5` |
 | `--yellow <N>` | Yellow light duration (seconds) | `2` |
 | `--red <N>` | Red light duration (seconds) | `5` |
@@ -88,6 +91,16 @@ Run headless with 20 vehicles on a 7x7 grid:
 Custom traffic light timings:
 ```bash
 ./traffic_simulation --green 8 --yellow 3 --red 10
+```
+
+# Run with larger window (1.5x scale factor):
+```bash
+./traffic_simulation --cell-size 60
+```
+
+# Run with smaller window:
+```bash
+./traffic_simulation --cell-size 30
 ```
 
 ## Project Structure

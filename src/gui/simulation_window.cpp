@@ -356,7 +356,7 @@ void SimulationWindow::drawStreetNames() {
         sf::Text t;
         t.setFont(font_);
         t.setString(name);
-        t.setCharacterSize(8);
+        t.setCharacterSize(static_cast<unsigned int>(cell_size_ * 0.2f));
         t.setFillColor(sf::Color(80, 78, 74));
         float py = y * cell_size_ + cell_size_ * 0.5f + tb;
         t.setPosition(gs * cell_size_ + 3.f, py - 5.f);
@@ -368,7 +368,7 @@ void SimulationWindow::drawStreetNames() {
         sf::Text t;
         t.setFont(font_);
         t.setString(name);
-        t.setCharacterSize(8);
+        t.setCharacterSize(static_cast<unsigned int>(cell_size_ * 0.2f));
         t.setFillColor(sf::Color(80, 78, 74));
         t.setRotation(90.f);
         float px = x * cell_size_ + cell_size_ * 0.5f;
@@ -429,7 +429,7 @@ void SimulationWindow::drawVehicles() {
             sf::Text lbl;
             lbl.setFont(font_);
             lbl.setString(std::to_string(v.id));
-            lbl.setCharacterSize(8);
+            lbl.setCharacterSize(static_cast<unsigned int>(cell_size_ * 0.2f));
             lbl.setFillColor(sf::Color(30, 28, 25));
             sf::FloatRect lb = lbl.getLocalBounds();
             lbl.setPosition(dx - lb.width * 0.5f - lb.left, dy - lb.height * 0.5f - lb.top);
@@ -449,7 +449,7 @@ void SimulationWindow::drawVehicles() {
             sf::Text id_text;
             id_text.setFont(font_);
             id_text.setString(std::to_string(v.id));
-            id_text.setCharacterSize(9);
+            id_text.setCharacterSize(static_cast<unsigned int>(cell_size_ * 0.225f));
             id_text.setStyle(sf::Text::Bold);
             id_text.setFillColor(sf::Color(255, 255, 255));
             id_text.setOutlineColor(sf::Color(0, 0, 0));
@@ -496,7 +496,7 @@ void SimulationWindow::drawToolbar() {
         title.setString(controller_->isSimulationComplete() ?
             "City Traffic Simulation [Finished]" :
             "City Traffic Simulation");
-        title.setCharacterSize(16);
+        title.setCharacterSize(static_cast<unsigned int>(cell_size_ * 0.4f));
         title.setStyle(sf::Text::Bold);
         title.setFillColor(sf::Color(35, 33, 30));
         title.setPosition(26.f, 7.f);
@@ -507,7 +507,7 @@ void SimulationWindow::drawToolbar() {
         status.setString(is_paused_ ?
             "PAUSED  -  press SPACE or Continue to resume" :
             controller_->isSimulationComplete() ? "COMPLETED" : "RUNNING  -  press SPACE to pause");
-        status.setCharacterSize(10);
+        status.setCharacterSize(static_cast<unsigned int>(cell_size_ * 0.25f));
         status.setFillColor(sf::Color(130, 128, 123));
         status.setPosition(26.f, 30.f);
         window_.draw(status);
@@ -554,7 +554,7 @@ void SimulationWindow::drawToolbar() {
             sf::Text lbl;
             lbl.setFont(font_);
             lbl.setString(b.label);
-            lbl.setCharacterSize(13);
+            lbl.setCharacterSize(static_cast<unsigned int>(cell_size_ * 0.325f));
             lbl.setStyle(sf::Text::Bold);
             lbl.setFillColor(sf::Color(255, 255, 255));
 
