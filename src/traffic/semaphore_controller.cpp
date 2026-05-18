@@ -127,4 +127,16 @@ std::size_t SemaphoreController::getSemaphoreCount() const {
     return semaphores_.size();
 }
 
+void SemaphoreController::pauseAll() {
+    for (auto& sem : semaphores_) {
+        sem->pauseCycle();
+    }
+}
+
+void SemaphoreController::resumeAll() {
+    for (auto& sem : semaphores_) {
+        sem->resumeCycle();
+    }
+}
+
 } // namespace traffic

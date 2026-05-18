@@ -70,6 +70,17 @@ std::size_t Semaphore::getIntersectionId() const {
     return intersection_id_;
 }
 
+void Semaphore::pauseCycle() {
+    paused_.store(true);
+    state_cv_.notify_all(); // wake up thread if waiting on state_cv_
+    pause_cv_.notify_all(); // wake up thread if waiting on pause_cv_
+}
+
+void Semaphore::resumeCycle() {
+    paused_.store(false);
+    pause_cv_.notify_all();
+}
+
 void Semaphore::cycle() {
     while (running_.load()) {
         // Green state
@@ -82,6 +93,12 @@ void Semaphore::cycle() {
         if (!running_.load()) break;
         std::this_thread::sleep_for(std::chrono::seconds(green_duration_));
         
+        // Pause check
+        {
+            std::unique_lock<std::mutex> lk(state_mutex_);
+            pause_cv_.wait(lk, [this]{ return !paused_.load() || !running_.load(); });
+        }
+        
         // Yellow state
         {
             std::lock_guard<std::mutex> lock(state_mutex_);
@@ -92,6 +109,12 @@ void Semaphore::cycle() {
         if (!running_.load()) break;
         std::this_thread::sleep_for(std::chrono::seconds(yellow_duration_));
         
+        // Pause check
+        {
+            std::unique_lock<std::mutex> lk(state_mutex_);
+            pause_cv_.wait(lk, [this]{ return !paused_.load() || !running_.load(); });
+        }
+        
         // Red state
         {
             std::lock_guard<std::mutex> lock(state_mutex_);
@@ -101,6 +124,12 @@ void Semaphore::cycle() {
         
         if (!running_.load()) break;
         std::this_thread::sleep_for(std::chrono::seconds(red_duration_));
+        
+        // Pause check
+        {
+            std::unique_lock<std::mutex> lk(state_mutex_);
+            pause_cv_.wait(lk, [this]{ return !paused_.load() || !running_.load(); });
+        }
     }
 }
 

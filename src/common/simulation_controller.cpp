@@ -10,7 +10,7 @@ namespace traffic_simulation {
 SimulationController::SimulationController()
     : vehicle_manager_(nullptr),
       is_running_(false),
-      is_paused_(false),
+      is_paused_(true),
       simulation_complete_(false),
       speed_multiplier_(1.0) {
 }
@@ -27,42 +27,31 @@ SimulationController::~SimulationController() {
 }
 
 void SimulationController::initialize(const SimulationConfig& config) {
-    Logger::getInstance().info("Initializing simulation with config: grid_size=" + 
+    Logger::getInstance().info("Initializing simulation with config: grid_size=" +
                                std::to_string(config.grid_size) +
                                ", vehicles=" + std::to_string(config.vehicle_count));
 
     config_ = config;
     simulation_complete_ = false;
-    is_paused_ = false;
+    is_paused_ = true;
     speed_multiplier_ = 1.0;
 
-    // Initialize the city
     city_.initialize(config.grid_size);
     Logger::getInstance().info("City initialized with grid size " + std::to_string(config.grid_size));
 
-    // Initialize semaphores at key intersections
-
-
-    // Vamos a poner semáforos en la mitad de las intersecciones disponibles
-    //int num_semaphores = (config.grid_size * config.grid_size) / 2;
-
-    // O si quieres que TODAS las intersecciones tengan semáforo, usa esto:
     int num_semaphores = config.grid_size * config.grid_size;
 
-    semaphore_controller_.initialize(city_, num_semaphores, 
-                                     config.green_duration, 
-                                     config.yellow_duration, 
+    semaphore_controller_.initialize(city_, num_semaphores,
+                                     config.green_duration,
+                                     config.yellow_duration,
                                      config.red_duration);
-    Logger::getInstance().info("Semaphore controller initialized with " + 
+    Logger::getInstance().info("Semaphore controller initialized with " +
                                std::to_string(semaphore_controller_.getSemaphoreCount()) + " semaphores");
 
-    // Create and initialize vehicle manager
     vehicle_manager_ = new vehicle::VehicleManager(city_);
-    
     vehicle_manager_->setSemaphoreController(&semaphore_controller_);
-
     vehicle_manager_->initialize(config.vehicle_count);
-    Logger::getInstance().info("Vehicle manager initialized with " + 
+    Logger::getInstance().info("Vehicle manager initialized with " +
                                std::to_string(vehicle_manager_->getTotalVehicleCount()) + " vehicles");
 
     Logger::getInstance().info("Simulation initialization complete");
@@ -83,7 +72,6 @@ int SimulationController::run() {
     is_running_ = true;
     simulation_complete_ = false;
 
-    // Start the simulation loop in a separate thread
     simulation_thread_ = std::thread(&SimulationController::simulationLoop, this);
 
     return 0;
@@ -92,7 +80,6 @@ int SimulationController::run() {
 void SimulationController::simulationLoop() {
     Logger::getInstance().info("Simulation loop started");
 
-    // Calculate tick interval based on speed multiplier
     const int base_tick_ms = constants::TICK_DURATION_MS;
     last_tick_time_ = std::chrono::steady_clock::now();
 
@@ -101,7 +88,6 @@ void SimulationController::simulationLoop() {
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             current_time - last_tick_time_).count();
 
-        // Calculate required sleep time based on speed multiplier
         int tick_interval = static_cast<int>(base_tick_ms / speed_multiplier_);
 
         if (elapsed_ms >= tick_interval) {
@@ -109,15 +95,12 @@ void SimulationController::simulationLoop() {
                 processTick();
                 last_tick_time_ = current_time;
             } else {
-                // Even when paused or complete, we need to sleep to avoid busy-waiting
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
         } else {
-            // Sleep for a short time to avoid busy-waiting
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 
-        // Check if simulation is complete (all vehicles arrived)
         if (!simulation_complete_ && vehicle_manager_ != nullptr) {
             if (vehicle_manager_->getActiveVehicleCount() == 0) {
                 simulation_complete_ = true;
@@ -136,20 +119,33 @@ void SimulationController::processTick() {
 }
 
 void SimulationController::pause() {
-    if (is_paused_) {
-        return;
-    }
+    if (is_paused_) return;
     is_paused_ = true;
+    vehicles_paused_ = true;
+    semaphore_controller_.pauseAll();
+    vehicle_manager_->setGlobalPause(&vehicles_paused_);
     Logger::getInstance().info("Simulation paused");
 }
 
 void SimulationController::resume() {
-    if (!is_paused_) {
-        return;
-    }
+    if (!is_paused_) return;
     is_paused_ = false;
+    vehicles_paused_ = false;
+    semaphore_controller_.resumeAll();
+    vehicle_manager_->setGlobalPause(nullptr);
     last_tick_time_ = std::chrono::steady_clock::now();
     Logger::getInstance().info("Simulation resumed");
+}
+
+void SimulationController::stepOnce() {
+    // Ensure loop is paused before the manual step
+    if (!is_paused_) {
+        is_paused_ = true;
+        Logger::getInstance().info("Simulation auto-paused for step");
+    }
+    // Advance exactly one tick
+    processTick();
+    Logger::getInstance().info("Manual step executed");
 }
 
 void SimulationController::setSpeed(double speed) {
@@ -164,21 +160,18 @@ void SimulationController::setSpeed(double speed) {
 void SimulationController::reset() {
     Logger::getInstance().info("Resetting simulation...");
 
-    // Stop the simulation thread if running
     bool was_running = is_running_;
     if (simulation_thread_.joinable()) {
         is_running_ = false;
         simulation_thread_.join();
     }
 
-    // Clean up vehicle manager
     if (vehicle_manager_) {
         vehicle_manager_->shutdown();
         delete vehicle_manager_;
         vehicle_manager_ = nullptr;
     }
 
-    // Re-initialize with the same config
     initialize(config_);
 
     if (was_running) {
@@ -205,20 +198,15 @@ city::City& SimulationController::getCity() {
     return city_;
 }
 
-bool SimulationController::isRunning() const {
-    return is_running_;
-}
+bool SimulationController::isRunning() const { return is_running_; }
+bool SimulationController::isPaused()  const { return is_paused_;  }
+double SimulationController::getSpeed() const { return speed_multiplier_; }
 
-bool SimulationController::isPaused() const {
-    return is_paused_;
-}
-
-double SimulationController::getSpeed() const {
-    return speed_multiplier_;
-}
 
 SimulationConfig SimulationController::getConfig() const {
     return config_;
 }
+
+bool SimulationController::isSimulationComplete() const { return simulation_complete_; }
 
 } // namespace traffic_simulation

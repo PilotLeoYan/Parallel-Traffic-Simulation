@@ -76,6 +76,16 @@ public:
      */
     std::size_t getSemaphoreCount() const;
 
+    /**
+     * @brief Pause all semaphore cycles
+     */
+    void pauseAll();
+
+    /**
+     * @brief Resume all semaphore cycles
+     */
+    void resumeAll();
+
 private:
     std::vector<std::unique_ptr<Semaphore>> semaphores_;
     std::unordered_map<city::Coordinate, Semaphore*, std::hash<city::Coordinate>> semaphore_map_;

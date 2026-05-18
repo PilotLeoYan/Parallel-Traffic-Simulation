@@ -73,6 +73,7 @@ struct SimulationConfig {
     int green_duration{5};
     int yellow_duration{2};
     int red_duration{6};
+    int cell_size{60};  // Cell size in pixels
 
     SimulationConfig() = default;
 
