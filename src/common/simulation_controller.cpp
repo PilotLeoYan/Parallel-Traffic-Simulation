@@ -121,12 +121,18 @@ void SimulationController::processTick() {
 void SimulationController::pause() {
     if (is_paused_) return;
     is_paused_ = true;
+    vehicles_paused_ = true;
+    semaphore_controller_.pauseAll();
+    vehicle_manager_->setGlobalPause(&vehicles_paused_);
     Logger::getInstance().info("Simulation paused");
 }
 
 void SimulationController::resume() {
     if (!is_paused_) return;
     is_paused_ = false;
+    vehicles_paused_ = false;
+    semaphore_controller_.resumeAll();
+    vehicle_manager_->setGlobalPause(nullptr);
     last_tick_time_ = std::chrono::steady_clock::now();
     Logger::getInstance().info("Simulation resumed");
 }

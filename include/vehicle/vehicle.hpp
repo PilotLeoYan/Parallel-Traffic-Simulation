@@ -107,6 +107,12 @@ public:
     city::Coordinate getNextPosition() const;
 
     /**
+     * @brief Get the vehicle's destination
+     * @return Destination coordinate
+     */
+    city::Coordinate getDestination() const;
+
+    /**
      * @brief Get the vehicle's ID
      * @return Vehicle ID
      */
@@ -144,10 +150,21 @@ public:
     void notifyConditionsChanged();
 
     /**
+     * @brief Advance the vehicle exactly one step; called externally by tick loop
+     */
+    void tick();
+
+    /**
      * @brief Set the SemaphoreController reference for this vehicle
      * @param controller Pointer to the SemaphoreController
      */
     void setSemaphoreController(const traffic::SemaphoreController* controller);
+
+    /**
+     * @brief Set the global pause flag pointer
+     * @param flag Pointer to the global paused atomic flag
+     */
+    void setPausedFlag(std::atomic<bool>* flag);
 
 private:
     /**
@@ -181,9 +198,13 @@ private:
     std::condition_variable cv_;
     std::atomic<bool> running_;
     std::atomic<bool> conditions_changed_;
+    std::atomic<bool> tick_requested_{ false };
 
     // Reference to the SemaphoreController for checking light states
     const traffic::SemaphoreController* semaphore_controller_ = nullptr;
+    
+    // Global pause flag pointer
+    std::atomic<bool>* global_paused_ = nullptr;
 };
 
 } // namespace vehicle

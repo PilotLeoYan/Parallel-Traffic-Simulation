@@ -127,7 +127,7 @@ int runWithGUI(traffic_simulation::SimulationController& controller,
 
     // Initialize GUI window
     gui::SimulationWindow window;
-    if (!window.initialize(800, 600, "City Traffic Simulation")) {
+    if (!window.initialize(900, 700, "City Traffic Simulation")) {
         std::cerr << "Failed to initialize SFML window\n";
         return 1;
     }

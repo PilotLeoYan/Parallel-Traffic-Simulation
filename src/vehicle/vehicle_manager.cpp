@@ -53,15 +53,12 @@ void VehicleManager::initialize(int vehicle_count) {
 }
 
 void VehicleManager::updateAll() {
-    // Notify all waiting vehicles that conditions may have changed
+    // Instead of notifying conditions (which does not advance vehicles),
+    // we now TICK each vehicle to advance exactly one step
     for (auto& vehicle : vehicles_) {
-        if (vehicle->getState() == traffic_simulation::VehicleState::WAITING ||
-            vehicle->getState() == traffic_simulation::VehicleState::BLOCKED) {
-            vehicle->notifyConditionsChanged();
-        }
+        vehicle->tick();
     }
 }
-
 std::vector<city::monitoring::VehicleMetrics> VehicleManager::getMetrics() const {
     std::vector<city::monitoring::VehicleMetrics> metrics;
     metrics.reserve(vehicles_.size());
@@ -131,10 +128,11 @@ std::vector<gui::VehicleRenderInfo> VehicleManager::getRenderInfo() const {
         }
         
         // Creamos la estructura visual con el ángulo
+        auto dest = vehicle->getDestination();
         gui::VehicleRenderInfo info(
             vehicle->getId(), 
             current.x, current.y, 
-            current.x, current.y,
+            dest.x, dest.y,
             angle
         );
         
@@ -179,6 +177,12 @@ city::Coordinate VehicleManager::generateDestination(
 
 void VehicleManager::setSemaphoreController(const traffic::SemaphoreController* controller) {
     semaphore_controller_ = controller;
+}
+
+void VehicleManager::setGlobalPause(std::atomic<bool>* flag) {
+    for (auto& vehicle : vehicles_) {
+        vehicle->setPausedFlag(flag);
+    }
 }
 
 } // namespace vehicle

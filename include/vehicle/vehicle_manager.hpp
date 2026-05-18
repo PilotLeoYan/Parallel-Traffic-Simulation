@@ -105,6 +105,12 @@ public:
      */
     void setSemaphoreController(const traffic::SemaphoreController* controller);
 
+    /**
+     * @brief Set global pause flag for all vehicles
+     * @param flag Pointer to the global paused atomic flag (nullptr to clear)
+     */
+    void setGlobalPause(std::atomic<bool>* flag);
+
 private:
     const city::City& city_;
     std::vector<std::unique_ptr<Vehicle>> vehicles_;

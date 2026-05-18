@@ -111,6 +111,7 @@ private:
     void drawStreets();
     void drawIntersections();
     void drawStreetDirections();
+    void drawStreetNames();
     void drawVehicles();
     void drawToolbar();
 

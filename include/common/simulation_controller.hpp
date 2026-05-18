@@ -77,6 +77,7 @@ private:
     SimulationConfig config_;
     std::atomic<bool> is_running_;
     std::atomic<bool> is_paused_;
+    std::atomic<bool> vehicles_paused_{ false };
     std::atomic<bool> simulation_complete_;
     std::atomic<double> speed_multiplier_;
 

@@ -79,6 +79,15 @@ public:
      */
     std::size_t getIntersectionId() const;
 
+    /**
+     * @brief Pause the semaphore cycle (pause animation)
+     */
+    void pauseCycle();
+
+    /**
+     * @brief Resume the semaphore cycle
+     */
+    void resumeCycle();
 private:
     /**
      * @brief Internal state machine loop that cycles through traffic light states
@@ -97,6 +106,10 @@ private:
     
     std::thread thread_;
     std::atomic<bool> running_;
+    
+    // Pause support
+    std::atomic<bool> paused_{ false };
+    std::condition_variable pause_cv_;
 };
 
 } // namespace traffic

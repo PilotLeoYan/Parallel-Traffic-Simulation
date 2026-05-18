@@ -163,6 +163,7 @@ void SimulationWindow::render() {
     if (city_) {
         drawGrid();
         drawStreets();
+        drawStreetNames();
         drawIntersections();   // bold colored squares
         drawStreetDirections();
         drawVehicles();
@@ -327,6 +328,57 @@ void SimulationWindow::drawStreetDirections() {
 }
 
 // ----------------------------------------------------------------
+// drawStreetNames -- street names on axes
+// ----------------------------------------------------------------
+void SimulationWindow::drawStreetNames() {
+    if (!city_ || !font_loaded_) return;
+    float tb = static_cast<float>(TOOLBAR_HEIGHT);
+    int gs = city_->getGridSize();
+
+    // Group horizontal streets by Y, vertical by X
+    std::map<int, std::string> h_names; // y -> name
+    std::map<int, std::string> v_names; // x -> name
+
+    for (const auto& s : city_->getStreets()) {
+        auto dir = s->getDirection();
+        auto start = s->getStartIntersection()->getCoordinate();
+        if (dir == city::Direction::EAST || dir == city::Direction::WEST) {
+            if (h_names.find(start.y) == h_names.end())
+                h_names[start.y] = s->getName();
+        } else {
+            if (v_names.find(start.x) == v_names.end())
+                v_names[start.x] = s->getName();
+        }
+    }
+
+    // Horizontal street names — left of the grid
+    for (auto& [y, name] : h_names) {
+        sf::Text t;
+        t.setFont(font_);
+        t.setString(name);
+        t.setCharacterSize(8);
+        t.setFillColor(sf::Color(80, 78, 74));
+        float py = y * cell_size_ + cell_size_ * 0.5f + tb;
+        t.setPosition(gs * cell_size_ + 3.f, py - 5.f);
+        window_.draw(t);
+    }
+
+    // Vertical street names — below the grid, rotated 90°
+    for (auto& [x, name] : v_names) {
+        sf::Text t;
+        t.setFont(font_);
+        t.setString(name);
+        t.setCharacterSize(8);
+        t.setFillColor(sf::Color(80, 78, 74));
+        t.setRotation(90.f);
+        float px = x * cell_size_ + cell_size_ * 0.5f;
+        float py = gs * cell_size_ + tb + 3.f;
+        t.setPosition(px + 5.f, py);
+        window_.draw(t);
+    }
+}
+
+// ----------------------------------------------------------------
 // drawVehicles -- path preview lines, then vehicle bodies
 // ----------------------------------------------------------------
 
@@ -359,6 +411,32 @@ void SimulationWindow::drawVehicles() {
         }
     }
 
+    // Draw destination markers first (so they appear below vehicles)
+    for (const auto& v : *vehicles_) {
+        float dx = v.destination_x * cell_size_ + cell_size_ * 0.5f;
+        float dy = v.destination_y * cell_size_ + cell_size_ * 0.5f + tb;
+
+        sf::CircleShape dest_dot(5.f);
+        dest_dot.setOrigin(5.f, 5.f);
+        dest_dot.setPosition(dx, dy);
+        sf::Color vc = Renderer::getVehicleColor(v.id);
+        dest_dot.setFillColor(sf::Color(vc.r, vc.g, vc.b, 180));
+        dest_dot.setOutlineColor(sf::Color(30, 28, 25));
+        dest_dot.setOutlineThickness(1.2f);
+        window_.draw(dest_dot);
+
+        if (font_loaded_) {
+            sf::Text lbl;
+            lbl.setFont(font_);
+            lbl.setString(std::to_string(v.id));
+            lbl.setCharacterSize(8);
+            lbl.setFillColor(sf::Color(30, 28, 25));
+            sf::FloatRect lb = lbl.getLocalBounds();
+            lbl.setPosition(dx - lb.width * 0.5f - lb.left, dy - lb.height * 0.5f - lb.top);
+            window_.draw(lbl);
+        }
+    }
+
     // 2. Vehicle bodies
     for (const auto& v : *vehicles_) {
         float px = v.x * cell_size_ + cell_size_ * 0.5f;
@@ -366,6 +444,21 @@ void SimulationWindow::drawVehicles() {
         Renderer::drawVehicle(window_, px, py,
                               cell_size_ / 3.0f,
                               v.id, v.is_waiting, v.angle);
+        // Draw vehicle ID on top of each car
+        if (font_loaded_) {
+            sf::Text id_text;
+            id_text.setFont(font_);
+            id_text.setString(std::to_string(v.id));
+            id_text.setCharacterSize(9);
+            id_text.setStyle(sf::Text::Bold);
+            id_text.setFillColor(sf::Color(255, 255, 255));
+            id_text.setOutlineColor(sf::Color(0, 0, 0));
+            id_text.setOutlineThickness(1.f);
+            sf::FloatRect lb = id_text.getLocalBounds();
+            id_text.setPosition(px - lb.width * 0.5f - lb.left,
+                                py - lb.height * 0.5f - lb.top);
+            window_.draw(id_text);
+        }
     }
 }
 
