@@ -238,7 +238,6 @@ bool Vehicle::advance() {
 
         position_ = next_pos;
         ++path_index_;
-        setState(traffic_simulation::VehicleState::MOVING);
         return true; // Éxito al avanzar
     }
     return false;
