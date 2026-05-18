@@ -493,7 +493,9 @@ void SimulationWindow::drawToolbar() {
     if (font_loaded_) {
         sf::Text title;
         title.setFont(font_);
-        title.setString("City Traffic Simulation");
+        title.setString(controller_->isSimulationComplete() ?
+            "City Traffic Simulation [Finished]" :
+            "City Traffic Simulation");
         title.setCharacterSize(16);
         title.setStyle(sf::Text::Bold);
         title.setFillColor(sf::Color(35, 33, 30));
@@ -504,7 +506,7 @@ void SimulationWindow::drawToolbar() {
         status.setFont(font_);
         status.setString(is_paused_ ?
             "PAUSED  -  press SPACE or Continue to resume" :
-            "RUNNING  -  press SPACE to pause");
+            controller_->isSimulationComplete() ? "COMPLETED" : "RUNNING  -  press SPACE to pause");
         status.setCharacterSize(10);
         status.setFillColor(sf::Color(130, 128, 123));
         status.setPosition(26.f, 30.f);

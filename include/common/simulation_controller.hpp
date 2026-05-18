@@ -61,6 +61,8 @@ public:
 
     bool isPaused() const;
 
+    bool isSimulationComplete() const;
+
     double getSpeed() const;
 
     SimulationConfig getConfig() const;

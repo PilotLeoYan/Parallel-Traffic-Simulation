@@ -202,8 +202,11 @@ bool SimulationController::isRunning() const { return is_running_; }
 bool SimulationController::isPaused()  const { return is_paused_;  }
 double SimulationController::getSpeed() const { return speed_multiplier_; }
 
+
 SimulationConfig SimulationController::getConfig() const {
     return config_;
 }
+
+bool SimulationController::isSimulationComplete() const { return simulation_complete_; }
 
 } // namespace traffic_simulation
