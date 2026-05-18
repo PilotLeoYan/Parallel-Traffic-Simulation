@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mutex>
+#include <chrono>
 #include <cstddef>
 #include <functional>
 #include <atomic>
@@ -82,7 +83,7 @@ private:
     size_t id_;
     int x_;
     int y_;
-    mutable std::mutex mutex_;
+    mutable std::timed_mutex mutex_;
     std::atomic<bool> is_occupied_{false};
     int congestion_level_ = 0;
 };

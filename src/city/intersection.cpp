@@ -13,11 +13,11 @@ void Intersection::lock() {
 }
 
 bool Intersection::try_lock() {
-    if (mutex_.try_lock()) {
+    if (mutex_.try_lock_for(std::chrono::milliseconds(500))) {
         is_occupied_ = true;
         return true;
     }
-    return false;
+    return false;   // timed out: another vehicle holds it, caller backs off
 }
 
 void Intersection::unlock() {
@@ -30,7 +30,7 @@ bool Intersection::isAvailable() const {
 }
 
 int Intersection::getCongestion() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::timed_mutex> lock(mutex_);
     return congestion_level_;
 }
 
