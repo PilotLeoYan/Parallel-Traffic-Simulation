@@ -78,14 +78,14 @@ std::shared_ptr<StreetSegment> City::getStreet(const Coordinate& from, const Coo
 }
 
 void City::initializeStreets() {
-    // NOMBRES DE CALLES AQUI 
-    std::vector<std::string> h_names = {"Av. Vallarta", "Av. Lazaro Cardenas", "Av. Patria", "Av. Americas", "Av. Niños Heroes", "Av. Mexico", "Calle Hidalgo", "Calle Morelos", "Av. Juarez", "Av. La Paz", "Av. Circunvalacion", "Av. Javier Mina"};
+    // NOMBRES DE CALLES AQUI
+    std::vector<std::string> h_names = {"Av. Vallarta", "Av. Lazaro Cardenas", "Av. Patria", "Av. Americas", "Av. Heroes", "Av. Mexico", "Calle Hidalgo", "Calle Morelos", "Av. Juarez", "Av. La Paz", "Av. Circunvalacion", "Av. Javier Mina"};
     std::vector<std::string> v_names = {"Calz. Independencia", "Av. Federalismo", "Av. Enrique Diaz", "Av. Lopez Mateos", "Av. Mariano Otero", "Av. Cruz del Sur", "Av. Copernico", "Av. Rafael Sanzio", "Calle Acueducto", "Calle Chapalita", "Calle Revolucion", "Av. Alcalde"};
 
     for (int y = 0; y < grid_size_; ++y) {
         for (int x = 0; x < grid_size_; ++x) {
             auto current = getIntersectionAt(x, y);
-            
+
             // Calles Horizontales (Hacia el Este)
             if (x < grid_size_ - 1) {
                 auto east = getIntersectionAt(x + 1, y);
@@ -93,7 +93,7 @@ void City::initializeStreets() {
                 bool is_two_way = (y % 2 == 0); // Alternamos doble sentido y un solo sentido
                 addStreet(std::make_shared<StreetSegment>(current, east, name, is_two_way));
             }
-            
+
             // Calles Verticales (Hacia el Sur)
             if (y < grid_size_ - 1) {
                 auto south = getIntersectionAt(x, y + 1);

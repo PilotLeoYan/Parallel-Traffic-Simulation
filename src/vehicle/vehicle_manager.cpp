@@ -59,11 +59,10 @@ void VehicleManager::initialize(int vehicle_count) {
 void VehicleManager::updateAll() {
 <<<<<<< Updated upstream
     // Notify all waiting vehicles that conditions may have changed
+    // Instead of notifying conditions (which does not advance vehicles),
+    // we now TICK each vehicle to advance exactly one step
     for (auto& vehicle : vehicles_) {
-        if (vehicle->getState() == traffic_simulation::VehicleState::WAITING ||
-            vehicle->getState() == traffic_simulation::VehicleState::BLOCKED) {
-            vehicle->notifyConditionsChanged();
-        }
+        vehicle->tick();
     }
 }
 =======
@@ -157,10 +156,11 @@ std::vector<gui::VehicleRenderInfo> VehicleManager::getRenderInfo() const {
         }
         
         // Creamos la estructura visual con el ángulo
+        auto dest = vehicle->getDestination();
         gui::VehicleRenderInfo info(
             vehicle->getId(), 
             current.x, current.y, 
-            current.x, current.y,
+            dest.x, dest.y,
             angle
         );
         
@@ -207,6 +207,11 @@ void VehicleManager::setSemaphoreController(const traffic::SemaphoreController* 
     semaphore_controller_ = controller;
 }
 
+void VehicleManager::setGlobalPause(std::atomic<bool>* flag) {
+    for (auto& vehicle : vehicles_) {
+        vehicle->setPausedFlag(flag);
+    }
+}
 <<<<<<< Updated upstream
 =======
 void VehicleManager::setGlobalPause(std::atomic<bool>* flag) {

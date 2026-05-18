@@ -108,6 +108,12 @@ public:
     city::Coordinate getNextPosition() const;
 
     /**
+     * @brief Get the vehicle's destination
+     * @return Destination coordinate
+     */
+    city::Coordinate getDestination() const;
+
+    /**
      * @brief Get the vehicle's ID
      * @return Vehicle ID
      */
@@ -143,6 +149,11 @@ public:
      * @brief Notify the vehicle that conditions have changed (for CV)
      */
     void notifyConditionsChanged();
+
+    /**
+     * @brief Advance the vehicle exactly one step; called externally by tick loop
+     */
+    void tick();
 
     /**
      * @brief Set the SemaphoreController reference for this vehicle
@@ -193,6 +204,7 @@ private:
     std::condition_variable cv_;
     std::atomic<bool> running_;
     std::atomic<bool> conditions_changed_;
+    std::atomic<bool> tick_requested_{ false };
 
     // Reference to the SemaphoreController for checking light states
     const traffic::SemaphoreController* semaphore_controller_ = nullptr;

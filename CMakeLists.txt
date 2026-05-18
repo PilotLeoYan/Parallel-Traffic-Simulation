@@ -4,7 +4,9 @@ project(traffic_simulation VERSION 1.0 LANGUAGES CXX)
 # Configuraciones de C++
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_compile_options(-Wall -Wextra)
+if(NOT MSVC)
+    add_compile_options(-Wall -Wextra)
+endif()
 
 # Buscar OpenMP
 find_package(OpenMP REQUIRED)
@@ -23,7 +25,7 @@ if(NOT SFML_FOUND)
 endif()
 
 # Add source files from all src/* directories
-file(GLOB_RECURSE SOURCES 
+file(GLOB_RECURSE SOURCES
     "src/*.cpp" "src/*/*.cpp"
 )
 

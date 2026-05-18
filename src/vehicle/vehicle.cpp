@@ -28,9 +28,11 @@ Vehicle::Vehicle(int id)
       conditions_changed_(false) {
 }
 
+
 Vehicle::~Vehicle() {
     stopThread();
 }
+
 
 bool Vehicle::setRoute(const city::Coordinate& start,
                        const city::Coordinate& dest,
@@ -54,6 +56,13 @@ bool Vehicle::setRoute(const city::Coordinate& start,
     return true;
 }
 
+
+void Vehicle::setPausedFlag(std::atomic<bool>* flag) {
+    global_paused_ = flag;
+}
+
+
+
 void Vehicle::run() {
     start_time_ = std::chrono::steady_clock::now();
     
@@ -67,86 +76,66 @@ void Vehicle::run() {
         if (current_state == traffic_simulation::VehicleState::WAITING ||
             current_state == traffic_simulation::VehicleState::BLOCKED) {
             
-            bool advanced = false;
+            // Wait until a tick is requested OR running becomes false
+            {
+                std::unique_lock<std::mutex> lk(state_mutex_);
+                cv_.wait(lk, [this]{
+                    return tick_requested_.load() || !running_.load();
+                });
+                tick_requested_ = false;
+            }
             
-            // Intentamos avanzar
+            if (!running_.load()) break;
+            
+            // Try to advance once
             if (city_ && canAdvance(*city_, semaphore_controller_)) {
                 if (advance()) {
-                    advanced = true;
-                    blocked_ticks_ = 0; // Se logró mover, reiniciamos el contador de frustración
-                    continue; 
+                    blocked_ticks_ = 0;
+                    continue;
                 }
             }
             
-            // NUEVO: Analizamos por qué no pudimos avanzar
-            if (!advanced) {
-                bool blocked_by_light = false;
-                
-                // Verificamos si hay un semáforo en rojo en la siguiente celda
-                if (city_ && semaphore_controller_ && path_index_ < current_path_.size()) {
-                    auto next_pos = current_path_[path_index_];
-                    auto semaphore = semaphore_controller_->getSemaphoreAt(next_pos);
-                    if (semaphore && !semaphore->isGreen()) {
-                        blocked_by_light = true;
-                    }
-                }
-
-                if (blocked_by_light) {
-                    // Somos pacientes en el semáforo, reseteamos la frustración
-                    blocked_ticks_ = 0;
-                } else {
-                    // Si el semáforo está en verde (o no hay) y NO pudimos avanzar,
-                    // hay otro auto bloqueando. Aumentamos la frustración.
-                    blocked_ticks_++;
-                    
-                    // Si lleva más de 15 ticks atorado, iniciamos RECUPERACIÓN DE DEADLOCK
-                    if (blocked_ticks_ > 15 && path_index_ < current_path_.size()) {
-                        auto node_to_avoid = current_path_[path_index_];
-                        
-                        traffic_simulation::Logger::getInstance().warning(
-                            "Vehículo " + std::to_string(id_) + " detectó colisión frontal/Deadlock. Re-calculando ruta...");
-
-                        // Calculamos ruta alterna ignorando el carro que nos bloquea
-                        auto new_path = Pathfinder::findPath(position_, destination_, *city_, node_to_avoid);
-                        
-                        if (!new_path.empty() && new_path.size() > 1) {
-                            std::lock_guard<std::mutex> lock(state_mutex_);
-                            current_path_ = new_path;
-                            path_index_ = 1; 
-                            blocked_ticks_ = 0; // Reseteamos contador
-                        }
-                    }
-                }
-                
-                // --- CÓDIGO DE ESPERA ORIGINAL ---
-                if (!is_waiting_.load()) {
-                    wait_start_ = std::chrono::steady_clock::now();
-                    is_waiting_ = true;
-                }
-                
-                std::unique_lock<std::mutex> lock(state_mutex_);
-                cv_.wait_for(lock, std::chrono::milliseconds(100), [this] {
-                    return conditions_changed_.load() || !running_.load();
-                });
-                conditions_changed_ = false;
-                
-                if (is_waiting_.load()) {
-                    auto wait_duration = std::chrono::steady_clock::now() - wait_start_;
-                    wait_time_.store(wait_time_.load() + std::chrono::duration<double>(wait_duration).count());
-                    is_waiting_ = false;
+            // Handle blocking (same as before: light check, deadlock recovery, wait time)
+            bool blocked_by_light = false;
+            if (city_ && semaphore_controller_ && path_index_ < current_path_.size()) {
+                auto next_pos = current_path_[path_index_];
+                auto semaphore = semaphore_controller_->getSemaphoreAt(next_pos);
+                if (semaphore && !semaphore->isGreen()) {
+                    blocked_by_light = true;
                 }
             }
+
+            if (!blocked_by_light) {
+                blocked_ticks_++;
+                
+                if (blocked_ticks_ > 15 && path_index_ < current_path_.size()) {
+                    auto node_to_avoid = current_path_[path_index_];
+                    traffic_simulation::Logger::getInstance().warning(
+                        "Vehículo " + std::to_string(id_) + " deadlock recovery. Re-calculando ruta...");
+                    auto new_path = Pathfinder::findPath(position_, destination_, *city_, node_to_avoid);
+                    if (!new_path.empty() && new_path.size() > 1) {
+                        std::lock_guard<std::mutex> lock(state_mutex_);
+                        current_path_ = new_path;
+                        path_index_ = 1;
+                        blocked_ticks_ = 0;
+                    }
+                }
+            }
+            
+            if (!is_waiting_.load()) {
+                wait_start_ = std::chrono::steady_clock::now();
+                is_waiting_ = true;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
 
         else if (current_state == traffic_simulation::VehicleState::MOVING) {
-            // Simulate movement time
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            
-            // After moving, set to waiting for next intersection
+            // After a tick-advancement, immediately set to WAITING
+            // (No more self-sleep, the tick loop controls timing)
             setState(traffic_simulation::VehicleState::WAITING);
         }
         
-        // Check if arrived
+        // Check if arrived (same as before)
         if (isArrived()) {
             arrival_time_ = std::chrono::steady_clock::now();
             auto travel_duration = arrival_time_ - start_time_;
@@ -184,6 +173,11 @@ void Vehicle::run() {
             break;
         }
     }
+}
+
+void Vehicle::tick() {
+    tick_requested_ = true;
+    cv_.notify_one();
 }
 
 bool Vehicle::canAdvance(city::City& city, const traffic::SemaphoreController* semaphore_controller) {
@@ -224,6 +218,7 @@ bool Vehicle::canAdvance(city::City& city, const traffic::SemaphoreController* s
     
     return false;
 }
+
 
 bool Vehicle::advance() {
     std::lock_guard<std::mutex> lock(state_mutex_);
@@ -272,11 +267,11 @@ bool Vehicle::advance() {
         }
         position_ = next_pos;
         ++path_index_;
-        setState(traffic_simulation::VehicleState::MOVING);
         return true; // Éxito al avanzar
     }
     return false;
 }
+
 
 void Vehicle::waitAtIntersection() {
     std::unique_lock<std::mutex> lock(state_mutex_);
@@ -287,17 +282,25 @@ void Vehicle::waitAtIntersection() {
     });
 }
 
+
 bool Vehicle::isArrived() const {
     return position_ == destination_;
 }
+
 
 traffic_simulation::VehicleState Vehicle::getState() const {
     return state_.load();
 }
 
+
 city::Coordinate Vehicle::getPosition() const {
     return position_;
 }
+city::Coordinate Vehicle::getDestination() const {
+    return destination_;
+}
+
+
 
 city::Coordinate Vehicle::getNextPosition() const {
     std::lock_guard<std::mutex> lock(state_mutex_);
@@ -309,23 +312,28 @@ city::Coordinate Vehicle::getNextPosition() const {
     return position_; 
 }
 
+
 int Vehicle::getId() const {
     return id_;
 }
 
+
 std::pair<double, double> Vehicle::getMetrics() const {
     return {total_travel_time_.load(), wait_time_.load()};
 }
+
 
 void Vehicle::startThread() {
     running_ = true;
     thread_ = std::thread([this]() { run(); });
 }
 
+
 void Vehicle::stopThread() {
     running_ = false;
     notifyConditionsChanged();
 }
+
 
 void Vehicle::joinThread() {
     if (thread_.joinable()) {
@@ -333,14 +341,17 @@ void Vehicle::joinThread() {
     }
 }
 
+
 void Vehicle::notifyConditionsChanged() {
     conditions_changed_ = true;
     cv_.notify_all();
 }
 
+
 void Vehicle::setState(traffic_simulation::VehicleState new_state) {
     state_ = new_state;
 }
+
 
 std::vector<city::Coordinate> Vehicle::getRemainingPath() const {
     std::lock_guard<std::mutex> lock(state_mutex_);
@@ -352,16 +363,17 @@ std::vector<city::Coordinate> Vehicle::getRemainingPath() const {
     return path;
 }
 
+
 void Vehicle::setSemaphoreController(const traffic::SemaphoreController* controller) {
     semaphore_controller_ = controller;
 }
+
 
 <<<<<<< Updated upstream
 =======
 void vehicle::Vehicle::setMetricsCollector(city::monitoring::MetricsCollector* collector) {
     metrics_collector_ = collector;
 }
-
 
 >>>>>>> Stashed changes
 } // namespace vehicle
