@@ -10,7 +10,7 @@ namespace traffic_simulation {
 SimulationController::SimulationController()
     : vehicle_manager_(nullptr),
       is_running_(false),
-      is_paused_(false),
+      is_paused_(true),
       simulation_complete_(false),
       speed_multiplier_(1.0) {
 }
@@ -33,7 +33,7 @@ void SimulationController::initialize(const SimulationConfig& config) {
 
     config_ = config;
     simulation_complete_ = false;
-    is_paused_ = false;
+    is_paused_ = true;
     speed_multiplier_ = 1.0;
 
     city_.initialize(config.grid_size);
