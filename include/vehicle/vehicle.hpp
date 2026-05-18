@@ -11,6 +11,7 @@
 #include "traffic/semaphore.hpp"
 #include "traffic/semaphore_controller.hpp"
 #include "common/types.hpp"
+#include "monitoring/metrics_collector.hpp"
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -166,6 +167,8 @@ public:
      */
     void setPausedFlag(std::atomic<bool>* flag);
 
+    void setMetricsCollector(city::monitoring::MetricsCollector* collector);
+
 private:
     /**
      * @brief Internal method to update vehicle state
@@ -205,6 +208,8 @@ private:
     
     // Global pause flag pointer
     std::atomic<bool>* global_paused_ = nullptr;
+
+    city::monitoring::MetricsCollector* metrics_collector_ = nullptr;
 };
 
 } // namespace vehicle

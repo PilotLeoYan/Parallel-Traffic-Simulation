@@ -6,6 +6,7 @@
  */
 
 #include "common/simulation_controller.hpp"
+#include "vehicle/pathfinder.hpp"
 #include "common/logger.hpp"
 #include "common/constants.hpp"
 #include "gui/simulation_window.hpp"
@@ -17,6 +18,7 @@ using namespace traffic_simulation;
 #include <cstring>
 #include <thread>
 #include <chrono>
+#include <vector>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -36,6 +38,8 @@ void printUsage(const char* program_name) {
               << "  --yellow N         Yellow light duration in seconds (default: " << constants::DEFAULT_YELLOW_DURATION << ")\n"
               << "  --red N            Red light duration in seconds (default: " << constants::DEFAULT_RED_DURATION << ")\n"
               << "  --cell-size N      Cell size in pixels (default: 60)\n"
+              << "  --routes FILE      Load start/dest coordinates from file\n"
+              << "  --benchmark        Run sequential vs parallel routing comparison\n"
               << "  --help             Show this help message\n";
 }
 
@@ -93,6 +97,10 @@ traffic_simulation::SimulationConfig parseArguments(int argc, char* argv[]) {
                 cell_size = 200;
             }
             config.cell_size = cell_size;
+        } else if (arg == "--routes" && i + 1 < argc) {
+            config.routes_file = argv[++i];
+        } else if (arg == "--benchmark") {
+            config.run_benchmark = true;
         } else {
             std::cerr << "Unknown option: " << arg << "\n";
             printUsage(argv[0]);
@@ -154,8 +162,61 @@ int runWithGUI(traffic_simulation::SimulationController& controller,
 
     window.run(controller);
 
+    std::cout << "\nResultados tras cerrar la interfaz gráfica:\n";
+    controller.getMetrics().exportToTable("");
+
     // When window is closed, simulation will stop
     return 0;
+}
+
+/**
+ * @brief Ejecuta una prueba de rendimiento comparando el cálculo de rutas
+ * de forma secuencial vs paralela usando OpenMP.
+ */
+void runRoutingBenchmark(city::City& city, traffic_simulation::SimulationConfig& config) {
+    std::cout << "\n============================================\n";
+    std::cout << "   BENCHMARK DE RUTAS: SECUENCIAL VS PARALELO \n";
+    std::cout << "============================================\n";
+
+    int test_vehicles = config.vehicle_count;
+    std::vector<city::Coordinate> starts(test_vehicles);
+    std::vector<city::Coordinate> dests(test_vehicles);
+
+    // Generar coordenadas aleatorias válidas dentro del grid para la prueba
+    for(int i = 0; i < test_vehicles; ++i) {
+        starts[i] = {std::rand() % config.grid_size, std::rand() % config.grid_size};
+        dests[i] = {std::rand() % config.grid_size, std::rand() % config.grid_size};
+    }
+
+    // --- 1. Ejecución Secuencial ---
+    auto start_seq = std::chrono::high_resolution_clock::now();
+    for(int i = 0; i < test_vehicles; ++i) {
+        vehicle::Pathfinder::findPath(starts[i], dests[i], city);
+    }
+    auto end_seq = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> seq_ms = end_seq - start_seq;
+
+    // --- 2. Ejecución Paralela (OpenMP) ---
+    auto start_par = std::chrono::high_resolution_clock::now();
+    
+    #pragma omp parallel for
+    for(int i = 0; i < test_vehicles; ++i) {
+        vehicle::Pathfinder::findPath(starts[i], dests[i], city);
+    }
+    
+    auto end_par = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> par_ms = end_par - start_par;
+
+    // --- Resultados ---
+    std::cout << "Vehiculos calculados: " << test_vehicles << "\n";
+    std::cout << "Tiempo Secuencial:    " << seq_ms.count() << " ms\n";
+    std::cout << "Tiempo Paralelo:      " << par_ms.count() << " ms\n";
+    
+    if(par_ms.count() > 0) {
+        double speedup = seq_ms.count() / par_ms.count();
+        std::cout << "Mejora (Speedup):     " << speedup << "x\n";
+    }
+    std::cout << "============================================\n\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -201,6 +262,9 @@ int main(int argc, char* argv[]) {
     } catch (const std::exception& e) {
         std::cerr << "Failed to initialize simulation: " << e.what() << "\n";
         return 1;
+    }
+    if (config.run_benchmark) {
+        runRoutingBenchmark(controller.getCity(), config);
     }
 
     int exit_code;
