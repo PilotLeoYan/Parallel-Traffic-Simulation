@@ -126,6 +126,19 @@ void Vehicle::run() {
                 wait_start_ = std::chrono::steady_clock::now();
                 is_waiting_ = true;
             }
+            // Event-driven wait: sleep until light turns green, then re-evaluate.
+            // Falls back to a short sleep only when blocked by intersection occupancy
+            // (the 500ms try_lock_for in advance() already handles that timeout).
+            if (semaphore_controller_ && path_index_ < current_path_.size()) {
+                auto next_pos = current_path_[path_index_];
+                auto sem = semaphore_controller_->getSemaphoreAt(next_pos);
+                if (sem && !sem->isGreen()) {
+                    sem->waitForGreen();  // shared_lock + condition_variable_any
+                    continue;             // re-enter loop and retry canAdvance
+                }
+            }
+            // Intersection is occupied by another vehicle (light is green but lock failed).
+            // Short sleep before retry; try_lock_for already backed off 500ms in advance().
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
 

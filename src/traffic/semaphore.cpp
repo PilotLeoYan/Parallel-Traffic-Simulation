@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <thread>
+#include <shared_mutex>
 
 namespace traffic {
 
@@ -23,7 +24,7 @@ Semaphore::~Semaphore() {
 }
 
 void Semaphore::start() {
-    std::lock_guard<std::mutex> lock(state_mutex_);
+    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
     
     if (running_.load()) {
         return;  // Already running
@@ -40,6 +41,7 @@ void Semaphore::stop() {
     
     running_.store(false);
     state_cv_.notify_all();  // Wake up thread if blocked
+    pause_cv_.notify_all();  // Wake up pause condition
     
     if (thread_.joinable()) {
         thread_.join();
@@ -47,18 +49,18 @@ void Semaphore::stop() {
 }
 
 TrafficLightState Semaphore::getState() const {
-    std::lock_guard<std::mutex> lock(state_mutex_);
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
     return state_;
 }
 
 bool Semaphore::isGreen() const {
-    std::lock_guard<std::mutex> lock(state_mutex_);
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
     return state_ == TrafficLightState::GREEN || 
            state_ == TrafficLightState::YELLOW;
 }
 
-void Semaphore::waitForGreen() {
-    std::unique_lock<std::mutex> lock(state_mutex_);
+void Semaphore::waitForGreen() const {
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
     state_cv_.wait(lock, [this]() {
         return state_ == TrafficLightState::GREEN || 
                state_ == TrafficLightState::YELLOW ||
@@ -85,7 +87,7 @@ void Semaphore::cycle() {
     while (running_.load()) {
         // Green state
         {
-            std::lock_guard<std::mutex> lock(state_mutex_);
+            std::unique_lock<std::shared_mutex> lock(rw_mutex_);
             state_ = TrafficLightState::GREEN;
         }
         state_cv_.notify_all();
@@ -95,13 +97,13 @@ void Semaphore::cycle() {
         
         // Pause check
         {
-            std::unique_lock<std::mutex> lk(state_mutex_);
+            std::unique_lock<std::mutex> lk(pause_mutex_);
             pause_cv_.wait(lk, [this]{ return !paused_.load() || !running_.load(); });
         }
         
         // Yellow state
         {
-            std::lock_guard<std::mutex> lock(state_mutex_);
+            std::unique_lock<std::shared_mutex> lock(rw_mutex_);
             state_ = TrafficLightState::YELLOW;
         }
         state_cv_.notify_all();
@@ -111,13 +113,13 @@ void Semaphore::cycle() {
         
         // Pause check
         {
-            std::unique_lock<std::mutex> lk(state_mutex_);
+            std::unique_lock<std::mutex> lk(pause_mutex_);
             pause_cv_.wait(lk, [this]{ return !paused_.load() || !running_.load(); });
         }
         
         // Red state
         {
-            std::lock_guard<std::mutex> lock(state_mutex_);
+            std::unique_lock<std::shared_mutex> lock(rw_mutex_);
             state_ = TrafficLightState::RED;
         }
         state_cv_.notify_all();
@@ -127,7 +129,7 @@ void Semaphore::cycle() {
         
         // Pause check
         {
-            std::unique_lock<std::mutex> lk(state_mutex_);
+            std::unique_lock<std::mutex> lk(pause_mutex_);
             pause_cv_.wait(lk, [this]{ return !paused_.load() || !running_.load(); });
         }
     }

@@ -3,6 +3,7 @@
 
 #include <thread>
 #include <mutex>
+#include <shared_mutex>
 #include <condition_variable>
 #include <atomic>
 #include <cstddef>
@@ -71,7 +72,7 @@ public:
     /**
      * @brief Block until the light is green or yellow
      */
-    void waitForGreen();
+    void waitForGreen() const;
 
     /**
      * @brief Get the intersection ID
@@ -101,15 +102,14 @@ private:
     int yellow_duration_;
     int red_duration_;
     
-    mutable std::mutex state_mutex_;
-    std::condition_variable state_cv_;
+    mutable std::shared_mutex rw_mutex_{};  // mutable so const methods can lock it
+    mutable std::condition_variable_any state_cv_;
+    std::mutex pause_mutex_;
+    std::condition_variable pause_cv_;
     
     std::thread thread_;
     std::atomic<bool> running_;
-    
-    // Pause support
     std::atomic<bool> paused_{ false };
-    std::condition_variable pause_cv_;
 };
 
 } // namespace traffic
