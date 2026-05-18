@@ -7,6 +7,8 @@
 
 #include "vehicle/vehicle_manager.hpp"
 #include "vehicle/pathfinder.hpp"
+#include <map>
+#include <string>
 
 namespace vehicle {
 
@@ -44,6 +46,8 @@ void VehicleManager::initialize(int vehicle_count) {
         vehicle->setRoute(start, dest, const_cast<city::City&>(city_));
         
         vehicle->setSemaphoreController(semaphore_controller_);
+
+        vehicle->setMetricsCollector(metrics_collector_);
         
         // Start the vehicle thread
         vehicle->startThread();
@@ -53,6 +57,7 @@ void VehicleManager::initialize(int vehicle_count) {
 }
 
 void VehicleManager::updateAll() {
+<<<<<<< Updated upstream
     // Notify all waiting vehicles that conditions may have changed
     for (auto& vehicle : vehicles_) {
         if (vehicle->getState() == traffic_simulation::VehicleState::WAITING ||
@@ -61,6 +66,27 @@ void VehicleManager::updateAll() {
         }
     }
 }
+=======
+    std::map<std::string, int> current_waiting;
+
+    for (auto& vehicle : vehicles_) {
+        vehicle->tick();
+        
+        auto state = vehicle->getState();
+        if (state == traffic_simulation::VehicleState::WAITING || 
+            state == traffic_simulation::VehicleState::BLOCKED) {
+            
+            auto next_pos = vehicle->getNextPosition();
+            std::string key = std::to_string(next_pos.x) + "," + std::to_string(next_pos.y);
+            current_waiting[key]++;
+            
+            if (metrics_collector_ != nullptr) {
+                metrics_collector_->updateCongestion(next_pos.x, next_pos.y, current_waiting[key]);
+            }
+        }
+    }
+} 
+>>>>>>> Stashed changes
 
 std::vector<city::monitoring::VehicleMetrics> VehicleManager::getMetrics() const {
     std::vector<city::monitoring::VehicleMetrics> metrics;
@@ -181,4 +207,23 @@ void VehicleManager::setSemaphoreController(const traffic::SemaphoreController* 
     semaphore_controller_ = controller;
 }
 
+<<<<<<< Updated upstream
+=======
+void VehicleManager::setGlobalPause(std::atomic<bool>* flag) {
+    for (auto& vehicle : vehicles_) {
+        vehicle->setPausedFlag(flag);
+    }
+}
+
+void vehicle::VehicleManager::setMetricsCollector(city::monitoring::MetricsCollector* collector) {
+    metrics_collector_ = collector;
+    
+    // NUEVO: Asegurarnos de que los vehículos ya creados reciban el puntero
+    for (auto& vehicle : vehicles_) {
+        if (vehicle) {
+            vehicle->setMetricsCollector(collector);
+        }
+    }
+}
+>>>>>>> Stashed changes
 } // namespace vehicle

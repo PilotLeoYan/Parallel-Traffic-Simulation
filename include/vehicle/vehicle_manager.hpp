@@ -11,6 +11,7 @@
 #include "pathfinder.hpp"
 #include "city/city.hpp"
 #include "monitoring/metrics.hpp"
+#include "monitoring/metrics_collector.hpp"
 #include <vector>
 #include <memory>
 #include <thread>
@@ -105,6 +106,17 @@ public:
      */
     void setSemaphoreController(const traffic::SemaphoreController* controller);
 
+<<<<<<< Updated upstream
+=======
+    /**
+     * @brief Set global pause flag for all vehicles
+     * @param flag Pointer to the global paused atomic flag (nullptr to clear)
+     */
+    void setGlobalPause(std::atomic<bool>* flag);
+
+    void setMetricsCollector(city::monitoring::MetricsCollector* collector);
+
+>>>>>>> Stashed changes
 private:
     const city::City& city_;
     std::vector<std::unique_ptr<Vehicle>> vehicles_;
@@ -118,6 +130,8 @@ private:
 
     // Reference to the SemaphoreController for notifying vehicles
     const traffic::SemaphoreController* semaphore_controller_ = nullptr;
+
+    city::monitoring::MetricsCollector* metrics_collector_ = nullptr;
 };
 
 } // namespace vehicle

@@ -8,6 +8,7 @@
 #include "vehicle/vehicle.hpp"
 #include "vehicle/pathfinder.hpp"
 #include <cmath>
+#include <iostream>
 #include "common/logger.hpp"
 #include "city/street.hpp"
 
@@ -149,9 +150,29 @@ void Vehicle::run() {
         if (isArrived()) {
             arrival_time_ = std::chrono::steady_clock::now();
             auto travel_duration = arrival_time_ - start_time_;
-            total_travel_time_ = std::chrono::duration<double>(travel_duration).count();
+            // Usamos .store() por ser atomic en C++17
+            total_travel_time_.store(std::chrono::duration<double>(travel_duration).count());
             
+<<<<<<< Updated upstream
             // NUEVO: Libera bloqueo de la intersección destino final
+=======
+            // Cerrar el cronómetro de espera si llegó al destino mientras estaba esperando
+            if (is_waiting_.load()) {
+                auto wait_end = std::chrono::steady_clock::now();
+                double added_time = std::chrono::duration<double>(wait_end - wait_start_).count();
+                wait_time_.store(wait_time_.load() + added_time);
+                is_waiting_ = false;
+            }
+
+            // --- ENVIAR MÉTRICAS ---
+            if (metrics_collector_ != nullptr) {
+                metrics_collector_->recordVehicleArrival(id_, total_travel_time_.load(), wait_time_.load());
+            } else {
+                // Si vemos esto en consola, el puntero nunca llegó
+                std::cout << "\n[ERROR INTERNO] metrics_collector_ es NULL en Vehículo " << id_ << "\n";
+            }
+
+>>>>>>> Stashed changes
             if (city_) {
                 auto final_intersection = city_->getIntersection(position_);
                 if (final_intersection) {
@@ -242,6 +263,13 @@ bool Vehicle::advance() {
             }
         }
 
+        if (is_waiting_.load()) {
+            auto wait_end = std::chrono::steady_clock::now();
+            double added_time = std::chrono::duration<double>(wait_end - wait_start_).count();
+            wait_time_.store(wait_time_.load() + added_time);
+
+            is_waiting_ = false;
+        }
         position_ = next_pos;
         ++path_index_;
         setState(traffic_simulation::VehicleState::MOVING);
@@ -328,4 +356,12 @@ void Vehicle::setSemaphoreController(const traffic::SemaphoreController* control
     semaphore_controller_ = controller;
 }
 
+<<<<<<< Updated upstream
+=======
+void vehicle::Vehicle::setMetricsCollector(city::monitoring::MetricsCollector* collector) {
+    metrics_collector_ = collector;
+}
+
+
+>>>>>>> Stashed changes
 } // namespace vehicle
