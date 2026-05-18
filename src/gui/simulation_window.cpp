@@ -602,10 +602,8 @@ void SimulationWindow::run(traffic_simulation::SimulationController& controller)
     while (isOpen()) {
         handleEvents();
 
-        if (!is_paused_) {
-            render_info = controller.getVehicleManager().getRenderInfo();
-            setVehicles(&render_info);
-        }
+        render_info = controller.getVehicleManager().getRenderInfo();
+        setVehicles(&render_info);
 
         render();
         sf::sleep(sf::milliseconds(16));
