@@ -75,12 +75,9 @@ struct SimulationConfig {
     int green_duration{5};
     int yellow_duration{2};
     int red_duration{6};
-<<<<<<< Updated upstream
-=======
     int cell_size{60};  // Cell size in pixels
     std::string routes_file = "";
     bool run_benchmark = false;
->>>>>>> Stashed changes
 
     SimulationConfig() = default;
 

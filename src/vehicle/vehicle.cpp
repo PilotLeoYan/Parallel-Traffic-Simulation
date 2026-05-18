@@ -142,9 +142,7 @@ void Vehicle::run() {
             // Usamos .store() por ser atomic en C++17
             total_travel_time_.store(std::chrono::duration<double>(travel_duration).count());
             
-<<<<<<< Updated upstream
             // NUEVO: Libera bloqueo de la intersección destino final
-=======
             // Cerrar el cronómetro de espera si llegó al destino mientras estaba esperando
             if (is_waiting_.load()) {
                 auto wait_end = std::chrono::steady_clock::now();
@@ -161,7 +159,6 @@ void Vehicle::run() {
                 std::cout << "\n[ERROR INTERNO] metrics_collector_ es NULL en Vehículo " << id_ << "\n";
             }
 
->>>>>>> Stashed changes
             if (city_) {
                 auto final_intersection = city_->getIntersection(position_);
                 if (final_intersection) {
@@ -369,11 +366,8 @@ void Vehicle::setSemaphoreController(const traffic::SemaphoreController* control
 }
 
 
-<<<<<<< Updated upstream
-=======
 void vehicle::Vehicle::setMetricsCollector(city::monitoring::MetricsCollector* collector) {
     metrics_collector_ = collector;
 }
 
->>>>>>> Stashed changes
 } // namespace vehicle

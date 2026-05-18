@@ -57,15 +57,6 @@ void VehicleManager::initialize(int vehicle_count) {
 }
 
 void VehicleManager::updateAll() {
-<<<<<<< Updated upstream
-    // Notify all waiting vehicles that conditions may have changed
-    // Instead of notifying conditions (which does not advance vehicles),
-    // we now TICK each vehicle to advance exactly one step
-    for (auto& vehicle : vehicles_) {
-        vehicle->tick();
-    }
-}
-=======
     std::map<std::string, int> current_waiting;
 
     for (auto& vehicle : vehicles_) {
@@ -85,7 +76,6 @@ void VehicleManager::updateAll() {
         }
     }
 } 
->>>>>>> Stashed changes
 
 std::vector<city::monitoring::VehicleMetrics> VehicleManager::getMetrics() const {
     std::vector<city::monitoring::VehicleMetrics> metrics;
@@ -212,13 +202,6 @@ void VehicleManager::setGlobalPause(std::atomic<bool>* flag) {
         vehicle->setPausedFlag(flag);
     }
 }
-<<<<<<< Updated upstream
-=======
-void VehicleManager::setGlobalPause(std::atomic<bool>* flag) {
-    for (auto& vehicle : vehicles_) {
-        vehicle->setPausedFlag(flag);
-    }
-}
 
 void vehicle::VehicleManager::setMetricsCollector(city::monitoring::MetricsCollector* collector) {
     metrics_collector_ = collector;
@@ -230,5 +213,4 @@ void vehicle::VehicleManager::setMetricsCollector(city::monitoring::MetricsColle
         }
     }
 }
->>>>>>> Stashed changes
 } // namespace vehicle

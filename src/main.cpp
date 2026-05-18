@@ -37,12 +37,9 @@ void printUsage(const char* program_name) {
               << "  --green N          Green light duration in seconds (default: " << constants::DEFAULT_GREEN_DURATION << ")\n"
               << "  --yellow N         Yellow light duration in seconds (default: " << constants::DEFAULT_YELLOW_DURATION << ")\n"
               << "  --red N            Red light duration in seconds (default: " << constants::DEFAULT_RED_DURATION << ")\n"
-<<<<<<< Updated upstream
-=======
               << "  --cell-size N      Cell size in pixels (default: 60)\n"
               << "  --routes FILE      Load start/dest coordinates from file\n"
               << "  --benchmark        Run sequential vs parallel routing comparison\n"
->>>>>>> Stashed changes
               << "  --help             Show this help message\n";
 }
 
@@ -92,8 +89,6 @@ traffic_simulation::SimulationConfig parseArguments(int argc, char* argv[]) {
             if (config.red_duration < 1) {
                 config.red_duration = 1;
             }
-<<<<<<< Updated upstream
-=======
         } else if (arg == "--cell-size" && i + 1 < argc) {
             int cell_size = std::atoi(argv[++i]);
             if (cell_size < 10) {
@@ -106,7 +101,6 @@ traffic_simulation::SimulationConfig parseArguments(int argc, char* argv[]) {
             config.routes_file = argv[++i];
         } else if (arg == "--benchmark") {
             config.run_benchmark = true;
->>>>>>> Stashed changes
         } else {
             std::cerr << "Unknown option: " << arg << "\n";
             printUsage(argv[0]);

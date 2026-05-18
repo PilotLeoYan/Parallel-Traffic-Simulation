@@ -161,8 +161,6 @@ public:
      */
     void setSemaphoreController(const traffic::SemaphoreController* controller);
 
-<<<<<<< Updated upstream
-=======
     /**
      * @brief Set the global pause flag pointer
      * @param flag Pointer to the global paused atomic flag
@@ -171,7 +169,6 @@ public:
 
     void setMetricsCollector(city::monitoring::MetricsCollector* collector);
 
->>>>>>> Stashed changes
 private:
     /**
      * @brief Internal method to update vehicle state
@@ -208,14 +205,11 @@ private:
 
     // Reference to the SemaphoreController for checking light states
     const traffic::SemaphoreController* semaphore_controller_ = nullptr;
-<<<<<<< Updated upstream
-=======
     
     // Global pause flag pointer
     std::atomic<bool>* global_paused_ = nullptr;
 
     city::monitoring::MetricsCollector* metrics_collector_ = nullptr;
->>>>>>> Stashed changes
 };
 
 } // namespace vehicle
