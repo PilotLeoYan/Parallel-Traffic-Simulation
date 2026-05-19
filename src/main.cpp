@@ -56,8 +56,8 @@ traffic_simulation::SimulationConfig parseArguments(int argc, char* argv[]) {
             printUsage(argv[0]);
             std::exit(0);
         } else if (arg == "--no-gui") {
-            // This is handled separately in main
-            config.grid_size = -1; // Signal to use headless mode
+
+            // handled separately in main()
         } else if (arg == "--vehicles" && i + 1 < argc) {
             int vehicles = std::atoi(argv[++i]);
             if (vehicles < constants::MIN_VEHICLE_COUNT) {
@@ -68,9 +68,9 @@ traffic_simulation::SimulationConfig parseArguments(int argc, char* argv[]) {
             config.vehicle_count = vehicles;
         } else if (arg == "--grid" && i + 1 < argc) {
             int grid = std::atoi(argv[++i]);
-            if (grid < constants::MIN_GRID_SIZE) {
+            if (grid < 1) {
                 grid = constants::MIN_GRID_SIZE;
-            } else if (grid > constants::MAX_GRID_SIZE) {
+            } else if (grid > 100) {
                 grid = constants::MAX_GRID_SIZE;
             }
             config.grid_size = grid;
