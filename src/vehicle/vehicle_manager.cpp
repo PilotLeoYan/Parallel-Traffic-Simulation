@@ -38,12 +38,22 @@ void VehicleManager::initialize(int vehicle_count) {
     for (int i = 0; i < vehicle_count; ++i) {
         auto vehicle = std::make_unique<Vehicle>(i);
         
-        // Get random start and destination coordinates
-        auto start = getRandomCoordinate();
-        auto dest = generateDestination(start);
+        bool route_set = false;
+        city::Coordinate start, dest;
+
         
-        // Set route (this also initializes vehicle position)
-        vehicle->setRoute(start, dest, const_cast<city::City&>(city_));
+        for (int attempt = 0; attempt < 200 && !route_set; ++attempt) {
+            start = getRandomCoordinate();
+            dest  = generateDestination(start);
+            route_set = vehicle->setRoute(start, dest,
+                                          const_cast<city::City&>(city_));
+        }
+        
+        if (!route_set) {
+            // Grid is full or pathfinder has no solution; skip this vehicle.
+            total_vehicles_--;
+            continue;
+        }
         
         vehicle->setSemaphoreController(semaphore_controller_);
 

@@ -66,7 +66,7 @@ public:
     Intersection(const Intersection&) = delete;
     Intersection& operator=(const Intersection&) = delete;
 
-    // Mutex operations
+    // Mutex operations (legacy, kept for compatibility)
     void lock();
     bool try_lock();
     void unlock();
@@ -83,8 +83,8 @@ private:
     size_t id_;
     int x_;
     int y_;
-    mutable std::timed_mutex mutex_;
-    std::atomic<bool> is_occupied_{false};
+    mutable std::mutex congestion_mutex_;   // separate lock for congestion reads/writes
+    std::atomic<bool> is_occupied_{false};  // single source of truth for occupancy
     int congestion_level_ = 0;
 };
 

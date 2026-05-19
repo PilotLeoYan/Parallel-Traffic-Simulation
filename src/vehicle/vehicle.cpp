@@ -51,7 +51,16 @@ bool Vehicle::setRoute(const city::Coordinate& start,
         state_ = traffic_simulation::VehicleState::BLOCKED;
         return false;
     }
-    
+
+    // Claim the starting cell immediately so no other vehicle can spawn here.
+    auto start_intersection = city_->getIntersection(start);
+    if (start_intersection && !start_intersection->try_lock()) {
+        // Cell already occupied; caller must retry with a different start.
+        current_path_.clear();
+        state_ = traffic_simulation::VehicleState::BLOCKED;
+        return false;
+    }
+
     state_ = traffic_simulation::VehicleState::WAITING;
     return true;
 }
@@ -254,10 +263,8 @@ bool Vehicle::advance() {
                     current_intersection->unlock();
                 }
             } else if (path_index_ == 0) {
-                // Es el inicio de la simulación para este vehículo, asegura su posición inicial
-                if (next_intersection) {
-                    if (!next_intersection->try_lock()) return false;
-                }
+                // Already locked in setRoute(); nothing to do here.
+                // The unlock happens on the next call when next_pos != position_.
             }
 
             auto street = city_->getStreet(position_, next_pos);
